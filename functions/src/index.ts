@@ -8,6 +8,9 @@
 export { onUserCreated } from './auth/onUserCreated.js';
 export { setCustomClaims } from './auth/setCustomClaims.js';
 
+// Customers
+export { updateCustomerStatus } from './customers/updateCustomerStatus.js';
+
 // Vendors (Phase 4)
 export { approveVendor } from './vendors/approveVendor.js';
 

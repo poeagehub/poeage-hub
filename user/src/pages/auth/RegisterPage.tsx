@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -48,7 +49,7 @@ export const RegisterPage: React.FC = () => {
       } else if (code === 'auth/weak-password') {
         setErrorMsg('Password is too weak. Please use letters, numbers, and symbols.');
       } else {
-        setErrorMsg((err as { message?: string }).message || 'Failed to create account.');
+        setErrorMsg(friendlyError(err, 'Failed to create account.'));
       }
     } finally {
       setLoading(false);
@@ -56,7 +57,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[70vh] sm:min-h-[85vh] flex items-start sm:items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-md w-full shadow-lg border-gray-200">
         <CardHeader className="text-center space-y-2">
           <div className="w-12 h-12 bg-blue-600 rounded-xl text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">

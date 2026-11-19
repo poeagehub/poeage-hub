@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDocuments } from '@poeage/firebase-client';
+import { getDocuments, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Order, Vendor, Driver, Product } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
@@ -9,7 +9,6 @@ import {
   ShoppingBag,
   Store,
   Truck,
-  TrendingUp,
   AlertTriangle,
   Clock,
   CheckCircle,
@@ -18,19 +17,22 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 
+import { getOrdersWithLiveStatus } from '../lib/liveOrders';
+
 export const DashboardPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLiveMetrics = async () => {
       setLoading(true);
       try {
         const [oList, vList, dList, pList] = await Promise.all([
-          getDocuments<Order>(COLLECTION.ORDERS),
+          getOrdersWithLiveStatus(),
           getDocuments<Vendor>(COLLECTION.VENDORS),
           getDocuments<Driver>(COLLECTION.DRIVERS),
           getDocuments<Product>(COLLECTION.PRODUCTS),
@@ -40,7 +42,8 @@ export const DashboardPage: React.FC = () => {
         setDrivers(dList);
         setProducts(pList);
       } catch (err) {
-        console.warn('Live dashboard fetch fallback:', err);
+        console.error('Dashboard fetch failed:', err);
+        setLoadError(friendlyError(err, 'Failed to load live data.'));
       } finally {
         setLoading(false);
       }
@@ -77,6 +80,12 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          Could not load live data: {loadError}
+        </div>
+      )}
+
       {loading ? (
         <div className="py-20 flex justify-center">
           <Spinner size="lg" />
@@ -93,11 +102,9 @@ export const DashboardPage: React.FC = () => {
                       Platform GMV
                     </p>
                     <h3 className="text-2xl font-extrabold text-gray-900 mt-1">
-                      {totalGMVPaise > 0 ? formatMoney(totalGMVPaise) : '₹14,85,200'}
+                      {formatMoney(totalGMVPaise)}
                     </h3>
-                    <p className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
-                      <TrendingUp className="w-3.5 h-3.5" /> +18.4% vs last week
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Across {orders.length} orders</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
                     <DollarSign className="w-6 h-6" />
@@ -114,7 +121,7 @@ export const DashboardPage: React.FC = () => {
                       Total Orders
                     </p>
                     <h3 className="text-2xl font-extrabold text-gray-900 mt-1">
-                      {orders.length > 0 ? orders.length : 142}
+                      {orders.length}
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">
                       {ordersAwaitingFulfillment} awaiting fulfillment
@@ -135,7 +142,7 @@ export const DashboardPage: React.FC = () => {
                       Active Merchants
                     </p>
                     <h3 className="text-2xl font-extrabold text-gray-900 mt-1">
-                      {activeVendorsCount > 0 ? activeVendorsCount : 2}
+                      {activeVendorsCount}
                     </h3>
                     <p className="text-xs text-blue-600 font-semibold mt-1">
                       {pendingVendorsCount} KYC applications pending
@@ -156,7 +163,7 @@ export const DashboardPage: React.FC = () => {
                       Logistics Fleet
                     </p>
                     <h3 className="text-2xl font-extrabold text-gray-900 mt-1">
-                      {activeDriversCount > 0 ? activeDriversCount : 1}
+                      {activeDriversCount}
                     </h3>
                     <p className="text-xs text-purple-600 font-semibold mt-1">
                       {pendingDriversCount} driver onboarding reviews

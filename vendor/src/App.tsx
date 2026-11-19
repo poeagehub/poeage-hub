@@ -12,19 +12,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProductListPage } from './pages/products/ProductListPage';
 import { CreateProductPage } from './pages/products/CreateProductPage';
 import { VendorOrdersPage } from './pages/orders/VendorOrdersPage';
+import { InventoryPage } from './pages/inventory/InventoryPage';
+import { StoreSettingsPage } from './pages/settings/StoreSettingsPage';
 import { VendorSettlementsPage } from './pages/settlements/VendorSettlementsPage';
-
-const PlaceholderView: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
-  <div className="p-8">
-    <div className="bg-white border border-gray-200 rounded-xl p-8 text-center max-w-xl mx-auto shadow-sm">
-      <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
-      <p className="text-sm text-gray-500 mb-4">{subtitle}</p>
-      <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">
-        Phase 4 Commerce Active · Next Module Loaded Soon
-      </span>
-    </div>
-  </div>
-);
 
 export default function App() {
   return (
@@ -49,15 +39,9 @@ export default function App() {
                         <Route path="/products" element={<ProductListPage />} />
                         <Route path="/products/new" element={<CreateProductPage />} />
                         <Route path="/orders" element={<VendorOrdersPage />} />
-                        <Route
-                          path="/inventory"
-                          element={<PlaceholderView title="Inventory & Stock Adjustments" subtitle="Track live, reserved, and threshold stock levels." />}
-                        />
+                        <Route path="/inventory" element={<InventoryPage />} />
                         <Route path="/settlements" element={<VendorSettlementsPage />} />
-                        <Route
-                          path="/settings"
-                          element={<PlaceholderView title="Store Profile & Policies" subtitle="Configure opening hours, shipping policies, and return terms." />}
-                        />
+                        <Route path="/settings" element={<StoreSettingsPage />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </main>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -11,6 +11,8 @@ import {
   Settings,
   Shield,
 } from 'lucide-react';
+import { subscribeToCollection, where } from '@poeage/firebase-client';
+import { COLLECTION } from '@poeage/config';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -23,9 +25,31 @@ const NAV_ITEMS = [
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
+/** Live count of documents waiting for admin review in a collection. */
+function usePendingCount(collectionName: string): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const unsubscribe = subscribeToCollection<{ id: string }>(
+      collectionName,
+      [where('status', '==', 'pending_review')],
+      (docs) => setCount(docs.length),
+      (err) => console.error(`[Sidebar] pending ${collectionName} listener failed:`, err),
+    );
+    return () => unsubscribe();
+  }, [collectionName]);
+  return count;
+}
+
 export const AdminSidebar: React.FC = () => {
+  const pendingVendors = usePendingCount(COLLECTION.VENDORS);
+  const pendingDrivers = usePendingCount(COLLECTION.DRIVERS);
+  const badges: Record<string, number> = {
+    '/vendors': pendingVendors,
+    '/drivers': pendingDrivers,
+  };
+
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 min-h-screen">
+    <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col flex-shrink-0 sticky top-0 h-screen self-start">
       {/* Brand */}
       <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
         <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow">
@@ -38,13 +62,14 @@ export const AdminSidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
           Marketplace Operations
         </div>
 
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const pending = badges[item.path] ?? 0;
           return (
             <NavLink
               key={item.path}
@@ -58,7 +83,18 @@ export const AdminSidebar: React.FC = () => {
               }
             >
               <Icon className="w-4 h-4" />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {pending > 0 && (
+                <span
+                  className="relative flex items-center justify-center"
+                  title={`${pending} pending approval request${pending > 1 ? 's' : ''}`}
+                >
+                  <span className="absolute inline-flex h-5 w-5 rounded-full bg-red-500 opacity-60 animate-ping" />
+                  <span className="relative min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {pending > 99 ? '99+' : pending}
+                  </span>
+                </span>
+              )}
             </NavLink>
           );
         })}

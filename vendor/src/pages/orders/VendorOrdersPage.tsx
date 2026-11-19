@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useVendorAuth } from '../../context/AuthContext';
-import { getDocuments, updateDocument, callFunction } from '@poeage/firebase-client';
+import {
+  subscribeToCollection,
+  updateDocument,
+  arrayUnion,
+  where,
+  friendlyError,
+  runTransaction,
+  db,
+  doc,
+  collection,
+  serverTimestamp,
+} from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { VendorOrder, VendorOrderStatus } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
@@ -26,58 +37,122 @@ export const VendorOrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchVendorOrders = async () => {
-    setLoading(true);
-    try {
-      const allOrders = await getDocuments<VendorOrder>(COLLECTION.VENDOR_ORDERS);
-      const vendorId = vendor?.id || user?.uid;
-      // Filter orders belonging to this vendor
-      const filtered = allOrders
-        .filter((o) => !vendorId || o.vendorId === vendorId || o.vendorId === user?.uid)
-        .sort((a, b) => {
-          const timeA = (a.createdAt as any)?.seconds || 0;
-          const timeB = (b.createdAt as any)?.seconds || 0;
-          return timeB - timeA;
-        });
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-      setOrders(filtered);
-    } catch (err) {
-      console.warn('Could not fetch vendor orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Live feed: new orders, and the driver's pickup / delivery updates, show up without refreshing.
   useEffect(() => {
-    fetchVendorOrders();
-  }, [vendor, user]);
+    const vendorId = vendor?.id || user?.uid;
+    if (!vendorId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    const unsubscribe = subscribeToCollection<VendorOrder>(
+      COLLECTION.VENDOR_ORDERS,
+      [where('vendorId', '==', vendorId)],
+      (list) => {
+        setOrders(
+          [...list].sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0)),
+        );
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Could not load vendor orders:', err);
+        setLoadError(friendlyError(err, 'Could not load your orders. Please try again.'));
+        setLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [vendor?.id, user?.uid, reloadKey]);
+
+  const fetchVendorOrders = () => setReloadKey((k) => k + 1);
+
+  const STATUS_LABEL: Record<string, string> = {
+    confirmed: 'Order accepted by seller',
+    processing: 'Seller started packing',
+    ready_for_pickup: 'Packed and ready for pickup',
+  };
 
   const handleUpdateStatus = async (orderId: string, targetStatus: VendorOrderStatus) => {
     setUpdatingId(orderId);
+    setActionError(null);
     try {
-      // 1. Try Cloud Function
-      try {
-        await callFunction('updateOrderStatus', {
-          vendorOrderId: orderId,
-          status: targetStatus,
-          note: `Status updated by vendor to ${targetStatus}`,
+      const entry = {
+        status: targetStatus,
+        timestamp: new Date().toISOString(),
+        note: STATUS_LABEL[targetStatus] ?? `Status changed to ${targetStatus}`,
+        actorId: user?.uid ?? '',
+      };
+      const order = orders.find((o) => o.id === orderId);
+
+      if (targetStatus === 'confirmed' && order) {
+        // Accepting an order and deducting its stock happen together, or not at all.
+        await runTransaction(db, async (tx) => {
+          const orderRef = doc(db, COLLECTION.VENDOR_ORDERS, orderId);
+          const orderSnap = await tx.get(orderRef);
+          if (!orderSnap.exists() || orderSnap.data()['status'] !== 'pending') {
+            throw Object.assign(new Error('This order was already accepted.'), { code: 'already-moved' });
+          }
+          const wanted = new Map<string, { qty: number; name: string }>();
+          for (const it of order.items) {
+            const w = wanted.get(it.productId) ?? { qty: 0, name: it.name };
+            w.qty += it.quantity;
+            wanted.set(it.productId, w);
+          }
+          const reads = await Promise.all(
+            [...wanted.keys()].map(async (pid) => {
+              const ref = doc(db, COLLECTION.INVENTORY, pid);
+              return { pid, ref, snap: await tx.get(ref) };
+            }),
+          );
+          for (const { pid, ref, snap } of reads) {
+            if (!snap.exists()) continue; // stock not tracked for this product
+            const inv = snap.data() as { quantity: number; reservedQuantity?: number };
+            const need = wanted.get(pid)!;
+            if (inv.quantity < need.qty) {
+              throw Object.assign(
+                new Error(`Not enough stock for "${need.name}" (have ${inv.quantity}, need ${need.qty}). Add stock in Inventory first.`),
+                { code: 'low-stock' },
+              );
+            }
+            tx.update(ref, { quantity: inv.quantity - need.qty, updatedAt: serverTimestamp() });
+            tx.set(doc(collection(db, COLLECTION.INVENTORY_LOGS)), {
+              vendorId: order.vendorId,
+              productId: pid,
+              productName: need.name,
+              type: 'order',
+              change: -need.qty,
+              before: inv.quantity,
+              after: inv.quantity - need.qty,
+              reason: 'Order accepted',
+              note: `Sub-order #${orderId.slice(0, 8).toUpperCase()}`,
+              actorId: user?.uid ?? '',
+              createdAt: serverTimestamp(),
+            });
+          }
+          tx.update(orderRef, { status: 'confirmed', statusHistory: arrayUnion(entry), updatedAt: serverTimestamp() });
         });
-      } catch (fnErr) {
-        // Fallback to direct document update
-        console.warn('Cloud Function unavailable, using direct update fallback:', fnErr);
+      } else {
+        // Security rules only allow the next valid step (accept -> pack -> ready), so a stale screen cannot skip steps.
         await updateDocument(COLLECTION.VENDOR_ORDERS, orderId, {
           status: targetStatus,
-          updatedAt: new Date(),
+          statusHistory: arrayUnion(entry),
         });
       }
-
-      // Update state locally
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: targetStatus } : o))
-      );
-    } catch (err) {
+      // The live listener refreshes the card; no manual state patching needed.
+    } catch (err: any) {
       console.error('Failed to update status:', err);
-      alert('Could not update status. Please try again.');
+      setActionError(
+        err?.code === 'low-stock' || err?.code === 'already-moved'
+          ? err.message
+          : err?.code === 'permission-denied'
+          ? 'This order has already moved on or can no longer be changed. The list has been refreshed.'
+          : friendlyError(err, 'Could not update the order status. Please try again.'),
+      );
     } finally {
       setUpdatingId(null);
     }
@@ -134,6 +209,13 @@ export const VendorOrdersPage: React.FC = () => {
         </Button>
       </div>
 
+      {(actionError || loadError) && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{actionError || loadError}</span>
+        </div>
+      )}
+
       {/* Tabs & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-3">
         {/* Status Filter Tabs */}
@@ -144,6 +226,7 @@ export const VendorOrdersPage: React.FC = () => {
             { id: 'confirmed', label: 'Confirmed', count: orders.filter((o) => o.status === 'confirmed').length },
             { id: 'processing', label: 'Packing', count: orders.filter((o) => o.status === 'processing').length },
             { id: 'ready_for_pickup', label: 'Ready for Pickup', count: orders.filter((o) => o.status === 'ready_for_pickup').length },
+            { id: 'dispatched', label: 'On the Way', count: orders.filter((o) => o.status === 'dispatched').length },
             { id: 'delivered', label: 'Delivered', count: orders.filter((o) => o.status === 'delivered').length },
           ].map((tab) => (
             <button
@@ -256,6 +339,8 @@ export const VendorOrdersPage: React.FC = () => {
                     <span>
                       {order.status === 'ready_for_pickup'
                         ? 'Dispatch alert sent! Logistics driver will arrive for collection.'
+                        : order.status === 'dispatched'
+                        ? 'Picked up by the delivery partner and on its way to the customer.'
                         : order.status === 'delivered'
                         ? 'Order successfully delivered to customer doorstep.'
                         : 'Manage package status step-by-step to alert delivery fleet.'}

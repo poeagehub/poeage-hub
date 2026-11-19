@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useVendorAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { Building2, AlertCircle } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const VendorOnboardingPage: React.FC = () => {
   const [storeName, setStoreName] = useState('');
@@ -44,7 +45,7 @@ export const VendorOnboardingPage: React.FC = () => {
       });
       navigate('/status', { replace: true });
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Failed to submit application.');
+      setErrorMsg(friendlyError(err, 'Failed to submit application.'));
     } finally {
       setLoading(false);
     }

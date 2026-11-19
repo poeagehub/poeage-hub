@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useVendorAuth } from '../context/AuthContext';
-import { getDocuments } from '@poeage/firebase-client';
+import { getDocuments, where } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { VendorOrder, Product } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
@@ -26,19 +26,20 @@ export const DashboardPage: React.FC = () => {
     const fetchVendorMetrics = async () => {
       setLoading(true);
       try {
-        const [oList, pList] = await Promise.all([
-          getDocuments<VendorOrder>(COLLECTION.VENDOR_ORDERS),
-          getDocuments<Product>(COLLECTION.PRODUCTS),
-        ]);
-
         const vendorId = vendor?.id || user?.uid;
-        const myOrders = oList.filter((o) => !vendorId || o.vendorId === vendorId || o.vendorId === user?.uid);
-        const myProducts = pList.filter((p) => !vendorId || p.vendorId === vendorId || p.vendorId === user?.uid);
+        if (!vendorId) {
+          setLoading(false);
+          return;
+        }
+        const [myOrders, myProducts] = await Promise.all([
+          getDocuments<VendorOrder>(COLLECTION.VENDOR_ORDERS, [where('vendorId', '==', vendorId)]),
+          getDocuments<Product>(COLLECTION.PRODUCTS, [where('vendorId', '==', vendorId)]),
+        ]);
 
         setOrders(myOrders);
         setProducts(myProducts);
       } catch (err) {
-        console.warn('Vendor dashboard fetch error:', err);
+        console.error('Vendor dashboard fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -67,7 +68,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="info">Store Rating: {vendor?.metadata?.averageRating ?? 4.9} ★</Badge>
+          <Badge variant="info">Store Rating: {vendor?.metadata?.averageRating ?? '-'} ★</Badge>
           <Badge variant="default">{products.length} Listed SKUs</Badge>
         </div>
       </div>
@@ -129,7 +130,7 @@ export const DashboardPage: React.FC = () => {
                       Active Catalog SKUs
                     </p>
                     <h3 className="text-2xl font-extrabold text-gray-900 mt-1">
-                      {products.length > 0 ? products.length : 4}
+                      {products.length}
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">Live in store catalog</p>
                   </div>

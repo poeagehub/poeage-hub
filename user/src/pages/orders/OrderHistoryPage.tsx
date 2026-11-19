@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getDocuments } from '@poeage/firebase-client';
+import { subscribeToCollection, where } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
-import type { Order } from '@poeage/types';
-import { formatMoney } from '@poeage/utils';
+import type { Order, VendorOrder, Delivery } from '@poeage/types';
+import { formatMoney, deriveOrderStatus } from '@poeage/utils';
 import { Button, Card, Badge, Spinner } from '@poeage/ui';
 import { Package, ChevronRight, ShoppingBag, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -13,28 +13,34 @@ export const OrderHistoryPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [vendorOrders, setVendorOrders] = useState<VendorOrder[]>([]);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+
+  // Live: statuses move as sellers pack and drivers deliver, no refresh needed.
   useEffect(() => {
     if (!user) return;
-
-    const fetchOrders = async () => {
-      try {
-        const allOrders = await getDocuments<Order>(COLLECTION.ORDERS);
-        const userOrders = allOrders
-          .filter((o) => o.customerId === user.uid)
-          .sort((a, b) => {
-            const timeA = (a.createdAt as any)?.seconds || 0;
-            const timeB = (b.createdAt as any)?.seconds || 0;
-            return timeB - timeA;
-          });
-        setOrders(userOrders);
-      } catch (err) {
-        console.warn('Failed to fetch user orders:', err);
-      } finally {
+    const mine = [where('customerId', '==', user.uid)];
+    const unsubOrders = subscribeToCollection<Order>(
+      COLLECTION.ORDERS,
+      mine,
+      (list) => {
+        setOrders(
+          [...list].sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0)),
+        );
         setLoading(false);
-      }
+      },
+      (err) => {
+        console.error('Failed to fetch user orders:', err);
+        setLoading(false);
+      },
+    );
+    const unsubVendor = subscribeToCollection<VendorOrder>(COLLECTION.VENDOR_ORDERS, mine, setVendorOrders, () => {});
+    const unsubDelivery = subscribeToCollection<Delivery>(COLLECTION.DELIVERIES, mine, setDeliveries, () => {});
+    return () => {
+      unsubOrders();
+      unsubVendor();
+      unsubDelivery();
     };
-
-    fetchOrders();
   }, [user]);
 
   if (loading) {
@@ -64,9 +70,9 @@ export const OrderHistoryPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">My Orders</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">My Orders</h1>
         <p className="text-xs text-gray-500 mt-1">
           Review previous purchases, live shipment statuses, and digital invoices.
         </p>
@@ -74,6 +80,12 @@ export const OrderHistoryPage: React.FC = () => {
 
       <div className="space-y-4">
         {orders.map((order) => {
+          const progress = deriveOrderStatus(
+            order,
+            vendorOrders.filter((v) => v.orderId === order.id),
+            deliveries.filter((d) => d.orderId === order.id),
+          );
+          const shownStatus = progress.status;
           return (
             <Card key={order.id} className="p-5 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4 mb-4">
@@ -82,15 +94,15 @@ export const OrderHistoryPage: React.FC = () => {
                   <div className="flex items-center gap-3 mt-1">
                     <Badge
                       variant={
-                        order.status === 'delivered'
+                        shownStatus === 'delivered'
                           ? 'success'
-                          : order.status === 'cancelled'
+                          : shownStatus === 'cancelled'
                           ? 'danger'
                           : 'default'
                       }
                       className="capitalize text-xs font-semibold"
                     >
-                      {order.status.replace(/_/g, ' ')}
+                      {progress.stage}
                     </Badge>
                     <span className="text-xs text-gray-500">
                       Payment: {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online'}

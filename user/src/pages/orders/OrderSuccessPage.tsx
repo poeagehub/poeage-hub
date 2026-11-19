@@ -33,7 +33,7 @@ export const OrderSuccessPage: React.FC = () => {
   }, [orderId]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-16">
       {/* Celebration Header */}
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-600/10">

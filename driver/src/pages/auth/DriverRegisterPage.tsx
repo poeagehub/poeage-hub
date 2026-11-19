@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDriverAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { Truck, AlertCircle } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const DriverRegisterPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -35,7 +36,7 @@ export const DriverRegisterPage: React.FC = () => {
       await registerDriverAccount(email, password, name);
       navigate('/onboarding', { replace: true });
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Failed to create driver account.');
+      setErrorMsg(friendlyError(err, 'Failed to create driver account.'));
     } finally {
       setLoading(false);
     }

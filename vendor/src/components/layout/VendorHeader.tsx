@@ -1,27 +1,44 @@
 import React, { useState } from 'react';
+import { updateDocument, friendlyError } from '@poeage/firebase-client';
+import { COLLECTION } from '@poeage/config';
 import { useVendorAuth } from '../../context/AuthContext';
 import { LogOut, Power } from 'lucide-react';
 import { Badge } from '@poeage/ui';
 
 export const VendorHeader: React.FC = () => {
   const { vendor, signOutVendor } = useVendorAuth();
-  const [isOpen, setIsOpen] = useState(true);
+  const isOpen = vendor?.isOpen !== false;
+  const [busy, setBusy] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
-  const toggleStoreStatus = () => {
-    setIsOpen(!isOpen);
+  // Saved to your store record: while paused, customers cannot place new orders.
+  const toggleStoreStatus = async () => {
+    if (!vendor || busy) return;
+    setBusy(true);
+    setToggleError(null);
+    try {
+      await updateDocument(COLLECTION.VENDORS, vendor.id, { isOpen: !isOpen });
+    } catch (err) {
+      setToggleError(friendlyError(err, 'Could not change store status.'));
+      setTimeout(() => setToggleError(null), 5000);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-bold text-gray-900">{vendor?.storeName || 'Seller Hub'}</h1>
-        <Badge variant="success">Merchant Verified</Badge>
+        {vendor?.status === 'approved' ? <Badge variant="success">Merchant Verified</Badge> : <Badge variant="warning">Pending Review</Badge>}
       </div>
 
       <div className="flex items-center gap-4">
         {/* Store Open/Close Toggle */}
+        {toggleError && <span className="text-xs text-red-600">{toggleError}</span>}
         <button
           onClick={toggleStoreStatus}
+          disabled={busy}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
             isOpen
               ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'

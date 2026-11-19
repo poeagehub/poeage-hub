@@ -41,6 +41,21 @@ export const createOrder = https.onCall({ cors: true }, async (request) => {
   }
 
   try {
+    // Admin-managed delivery pricing (Platform Settings), with safe fallbacks.
+    const settingsSnap = await adminDb.collection('platformSettings').doc('global').get();
+    const settings = settingsSnap.exists ? settingsSnap.data()! : {};
+    const freeDeliveryThreshold: number =
+      typeof settings['freeDeliveryThreshold'] === 'number' ? settings['freeDeliveryThreshold'] : 49900;
+    const deliveryChargeFlat: number =
+      typeof settings['deliveryChargeFlat'] === 'number' ? settings['deliveryChargeFlat'] : 5000;
+    const driverEarningPerDelivery: number =
+      typeof settings['driverEarningPerDelivery'] === 'number' ? settings['driverEarningPerDelivery'] : 5000;
+    const defaultCommissionRate: number =
+      typeof settings['defaultCommissionRate'] === 'number' ? settings['defaultCommissionRate'] : 0.12;
+    if (settings['maintenanceMode'] === true) {
+      throw new HttpsError('unavailable', 'The store is under maintenance. Please try again later.');
+    }
+
     const result = await adminDb.runTransaction(async (transaction) => {
       // 1. Fetch all product documents
       const productDocs = await Promise.all(
@@ -87,7 +102,7 @@ export const createOrder = https.onCall({ cors: true }, async (request) => {
         const lineTotal = unitPrice * itemInput.quantity;
         const gstRate = typeof prod['gstRate'] === 'number' ? prod['gstRate'] : 0.18;
         const lineGst = Math.round(lineTotal * gstRate);
-        const commissionRate = typeof prod['commissionRate'] === 'number' ? prod['commissionRate'] : 0.12;
+        const commissionRate = typeof prod['commissionRate'] === 'number' ? prod['commissionRate'] : defaultCommissionRate;
         const lineCommission = Math.round(lineTotal * commissionRate);
 
         subtotal += lineTotal;
@@ -128,8 +143,8 @@ export const createOrder = https.onCall({ cors: true }, async (request) => {
         }
       }
 
-      // Free shipping threshold: ₹499 (49900 paise)
-      const deliveryCharge = subtotal >= 49900 ? 0 : 5000;
+      // Delivery charge from Platform Settings (a threshold of 0 means "always charge")
+      const deliveryCharge = freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold ? 0 : deliveryChargeFlat;
       const grandTotal = Math.max(0, subtotal + deliveryCharge - couponDiscount);
 
       // Human-readable order number
@@ -186,7 +201,7 @@ export const createOrder = https.onCall({ cors: true }, async (request) => {
           pickupAddress,
           deliveryAddress: data.shippingAddress,
           verificationOtp,
-          driverEarning: 5000, // ₹50 delivery partner earning
+          driverEarning: driverEarningPerDelivery,
           statusHistory: [
             {
               status: 'pending_assignment',

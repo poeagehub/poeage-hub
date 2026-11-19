@@ -1,10 +1,15 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useVendorAuth } from '../../context/AuthContext';
 import { Button, Card, CardContent } from '@poeage/ui';
 import { Clock, CheckCircle2, XCircle, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 
 export const VendorStatusPage: React.FC = () => {
   const { vendor, status, signOutVendor, refreshVendorState, loading } = useVendorAuth();
+
+  if (status === 'approved') {
+    return <Navigate to="/" replace />;
+  }
 
   const renderStatus = () => {
     switch (status) {
@@ -28,13 +33,6 @@ export const VendorStatusPage: React.FC = () => {
           title: 'Store Suspended',
           color: 'border-red-500/30 bg-red-500/10 text-red-300',
           desc: 'This merchant account is temporarily suspended by administrative review.',
-        };
-      case 'approved':
-        return {
-          icon: <CheckCircle2 className="w-10 h-10 text-emerald-400" />,
-          title: 'Merchant Approved!',
-          color: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-          desc: 'Congratulations! Your store is approved. You can now access the full vendor portal.',
         };
       default:
         return {

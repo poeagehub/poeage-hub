@@ -33,6 +33,49 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/drivers/$(driverId)).data.userId == request.auth.uid;
     }
 
+    // The signed-in user is the driver assigned to this delivery.
+    function isDeliveryDriver(deliveryId) {
+      return deliveryId != null
+        && exists(/databases/$(database)/documents/deliveries/$(deliveryId))
+        && 'driverId' in get(/databases/$(database)/documents/deliveries/$(deliveryId)).data
+        && isDriver(get(/databases/$(database)/documents/deliveries/$(deliveryId)).data.driverId);
+    }
+
+    // The only steps a vendor may take on their own sub-order, strictly in order.
+    function vendorOrderStep(fromStatus, toStatus) {
+      return (fromStatus == 'pending' && toStatus == 'confirmed')
+        || (fromStatus == 'confirmed' && toStatus == 'processing')
+        || (fromStatus == 'processing' && toStatus == 'ready_for_pickup');
+    }
+
+    function platformSettings() {
+      return get(/databases/$(database)/documents/platformSettings/global).data;
+    }
+
+    // Delivery fee the customer must be charged, from admin-managed settings.
+    function expectedDeliveryCharge(subtotal) {
+      return (platformSettings().freeDeliveryThreshold > 0 && subtotal >= platformSettings().freeDeliveryThreshold)
+        ? 0 : platformSettings().deliveryChargeFlat;
+    }
+
+    // The vendor exists and is approved (does NOT require the caller to own it).
+    function isLiveVendor(vendorId) {
+      return exists(/databases/$(database)/documents/vendors/$(vendorId))
+        && get(/databases/$(database)/documents/vendors/$(vendorId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/vendors/$(vendorId)).data.get('isOpen', true) == true;
+    }
+
+    function isApprovedVendor(vendorId) {
+      return isVendor(vendorId)
+        && get(/databases/$(database)/documents/vendors/$(vendorId)).data.status == 'approved';
+    }
+
+    function isApprovedDriver() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/drivers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.status in ['approved', 'active', 'offline'];
+    }
+
     function isValidTimestamp(ts) {
       return ts == request.time;
     }
@@ -59,18 +102,29 @@ service cloud.firestore {
     }
 
     match /platformSettings/{id} {
-      allow read: if isAuthenticated();
+      // Public: holds storefront values (delivery fee, support contact, maintenance flag). No secrets live here.
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     // ===== PRODUCTS (public catalog with restrictions) =====
     match /products/{productId} {
-      allow read: if resource.data.status == 'published' || isAdmin() 
+      allow read: if resource.data.status == 'published' || isAdmin()
         || isVendor(resource.data.vendorId);
-      allow create: if isAuthenticated() && hasRole('vendor')
-        && request.resource.data.vendorId == request.auth.uid;
-      allow update: if isVendor(resource.data.vendorId)
-        && !('commissionRate' in request.resource.data.diff(resource.data).affectedKeys())
+      // Vendors can only submit NEW products for moderation, at the platform commission rate.
+      allow create: if isAuthenticated()
+        && isApprovedVendor(request.resource.data.vendorId)
+        && request.resource.data.status == 'pending_review'
+        && request.resource.data.isFeatured == false
+        && request.resource.data.commissionRate == get(/databases/$(database)/documents/vendors/$(request.resource.data.vendorId)).data.commissionRate
+        && request.resource.data.basePrice > 0;
+      // Vendors may edit their listing but never approval state, commission, ownership or stats.
+      allow update: if (isVendor(resource.data.vendorId)
+          && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['status', 'commissionRate', 'vendorId', 'isFeatured', 'metadata'])
+          && request.resource.data.basePrice > 0
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 3)
         || isAdmin();
       allow delete: if isAdmin();
     }
@@ -84,13 +138,30 @@ service cloud.firestore {
     // ===== INVENTORY =====
     match /inventory/{inventoryId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin(); // Only functions can write inventory (via admin SDK)
+      // Vendors manage stock for their own products; reservations are handled by functions/admin.
+      allow create: if isApprovedVendor(request.resource.data.vendorId)
+        && request.resource.data.reservedQuantity == 0;
+      allow update: if isAdmin()
+        || (isVendor(resource.data.vendorId)
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['vendorId', 'productId', 'reservedQuantity'])
+            && request.resource.data.quantity >= 0
+            && request.resource.data.reorderLevel >= 0);
+      allow delete: if isAdmin();
+    }
+
+    // Every stock change a vendor makes (manual adjustment or order accepted) is recorded here.
+    match /inventoryLogs/{logId} {
+      allow read: if isAdmin() || isVendor(resource.data.vendorId);
+      allow create: if isVendor(request.resource.data.vendorId)
+        && request.resource.data.productId is string
+        && request.resource.data.after >= 0;
+      allow update, delete: if false;
     }
 
     // ===== USERS =====
     match /users/{userId} {
       allow read: if isCurrentUser(userId) || isAdmin();
-      allow create: if isCurrentUser(userId);
+      allow create: if isCurrentUser(userId) || isAdmin();
       allow update: if isCurrentUser(userId)
         && !('roles' in request.resource.data.diff(resource.data).affectedKeys())
         && !('status' in request.resource.data.diff(resource.data).affectedKeys())
@@ -101,7 +172,8 @@ service cloud.firestore {
     match /addresses/{addressId} {
       allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid
         || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid)
+        || isAdmin();
     }
 
     // ===== CARTS =====
@@ -117,16 +189,54 @@ service cloud.firestore {
     // ===== ORDERS =====
     match /orders/{orderId} {
       allow read: if isAuthenticated() && resource.data.customerId == request.auth.uid || isAdmin();
-      // Orders created only via Cloud Functions
-      allow create, update, delete: if isAdmin();
+      // Customers place Cash-on-Delivery orders directly (online payments need the payment backend).
+      // Rules re-check the money maths and the delivery fee against admin settings.
+      allow create: if isAuthenticated()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.paymentMethod == 'cod'
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.pricing.subtotal > 0
+        && request.resource.data.pricing.couponDiscount >= 0
+        && request.resource.data.pricing.couponDiscount <= request.resource.data.pricing.subtotal
+        && (request.resource.data.pricing.couponDiscount == 0
+            || (request.resource.data.couponCode != null
+                && exists(/databases/$(database)/documents/coupons/$(request.resource.data.couponCode))))
+        && request.resource.data.pricing.deliveryCharge == expectedDeliveryCharge(request.resource.data.pricing.subtotal)
+        && request.resource.data.pricing.grandTotal ==
+            request.resource.data.pricing.subtotal + request.resource.data.pricing.deliveryCharge
+            - request.resource.data.pricing.couponDiscount;
+      allow update, delete: if isAdmin();
     }
 
     match /vendorOrders/{vendorOrderId} {
       allow read: if isAdmin()
         || (isAuthenticated() && resource.data.customerId == request.auth.uid)
-        || isVendor(resource.data.vendorId);
-      // Status updates allowed for vendors (limited fields only via functions)
-      allow create, update, delete: if isAdmin();
+        || isVendor(resource.data.vendorId)
+        || isDeliveryDriver(resource.data.get('deliveryId', null));
+      // Created together with the customer's order; commission must match the vendor's own rate.
+      allow create: if isAuthenticated()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && isLiveVendor(request.resource.data.vendorId)
+        && request.resource.data.commissionAmount ==
+            math.round(request.resource.data.subtotal * get(/databases/$(database)/documents/vendors/$(request.resource.data.vendorId)).data.commissionRate)
+        && request.resource.data.vendorEarning == request.resource.data.subtotal - request.resource.data.commissionAmount;
+      // The vendor moves their own sub-order through preparation (accept, pack, ready), one step at a time.
+      // The assigned driver marks it dispatched once picked up and delivered once handed over.
+      allow update: if isAdmin()
+        || (isVendor(resource.data.vendorId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusHistory', 'updatedAt'])
+            && vendorOrderStep(resource.data.status, request.resource.data.status))
+        || (isDeliveryDriver(resource.data.get('deliveryId', null))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusHistory', 'updatedAt'])
+            && ((request.resource.data.status == 'dispatched'
+                  && resource.data.status == 'ready_for_pickup'
+                  && get(/databases/$(database)/documents/deliveries/$(resource.data.deliveryId)).data.status
+                      in ['picked_up', 'in_transit', 'out_for_delivery'])
+                || (request.resource.data.status == 'delivered'
+                  && resource.data.status in ['ready_for_pickup', 'dispatched']
+                  && get(/databases/$(database)/documents/deliveries/$(resource.data.deliveryId)).data.status == 'delivered')));
+      allow delete: if isAdmin();
     }
 
     // ===== PAYMENTS =====
@@ -149,8 +259,50 @@ service cloud.firestore {
     match /deliveries/{deliveryId} {
       allow read: if isAdmin()
         || (isAuthenticated() && resource.data.customerId == request.auth.uid)
-        || isDriver(resource.data.driverId);
-      allow write: if isAdmin(); // Status changes via functions only
+        || isDriver(resource.data.driverId)
+        // Approved drivers can see unassigned jobs that are waiting for a driver.
+        || (resource.data.status == 'pending_assignment' && isApprovedDriver());
+      // Created with the customer's order, unassigned, paying the admin-configured driver fee.
+      allow create: if isAuthenticated()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'pending_assignment'
+        && !('driverId' in request.resource.data)
+        && request.resource.data.driverEarning == platformSettings().driverEarningPerDelivery;
+      allow update: if isAdmin()
+        // An approved, online driver can claim an unassigned job (first one to claim it wins).
+        || (isApprovedDriver()
+            && resource.data.status == 'pending_assignment'
+            && !('driverId' in resource.data)
+            && get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.isOnline == true
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['driverId', 'driverName', 'status', 'statusHistory', 'updatedAt'])
+            && request.resource.data.driverId == request.auth.uid
+            && request.resource.data.status == 'driver_accepted')
+        // Assigned driver moves the job through pickup / transit...
+        || (isDriver(resource.data.driverId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusHistory', 'updatedAt'])
+            && request.resource.data.status in ['driver_accepted', 'driver_at_vendor', 'picked_up', 'in_transit', 'out_for_delivery']
+            // ...but cannot pick the parcel up before the vendor has packed it.
+            && (!(request.resource.data.status in ['picked_up', 'in_transit', 'out_for_delivery'])
+                || get(/databases/$(database)/documents/vendorOrders/$(resource.data.vendorOrderId)).data.status
+                    in ['ready_for_pickup', 'dispatched']))
+        // ...and completes it only with the customer's handover PIN (kept in deliveryOtps, unreadable by drivers).
+        || (isDriver(resource.data.driverId)
+            && resource.data.status in ['picked_up', 'in_transit', 'out_for_delivery']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusHistory', 'deliveredAt', 'updatedAt', 'otpEntered'])
+            && request.resource.data.status == 'delivered'
+            && request.resource.data.otpEntered == get(/databases/$(database)/documents/deliveryOtps/$(deliveryId)).data.otp);
+      allow delete: if isAdmin();
+    }
+
+    // Handover PIN for each delivery. Only the customer who owns it (and admins) can read it.
+    match /deliveryOtps/{deliveryId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.customerId == request.auth.uid);
+      allow create: if isAuthenticated()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.otp is string
+        && request.resource.data.otp.size() == 4;
+      allow update, delete: if false;
     }
 
     match /deliveryEvents/{eventId} {
@@ -162,11 +314,25 @@ service cloud.firestore {
     // ===== VENDORS =====
     match /vendors/{vendorId} {
       allow read: if resource.data.status == 'approved' || isAdmin() || isVendor(vendorId);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isVendor(vendorId)
-        && !('commissionRate' in request.resource.data.diff(resource.data).affectedKeys())
-        && !('status' in request.resource.data.diff(resource.data).affectedKeys())
+      // New vendor stores can only be created as pending; admins approve them.
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending_review';
+      // A store owner edits their own profile, contact, pickup address, payout details, hours and policies.
+      // Approval status, commission, ownership and sales figures stay admin-only.
+      allow update: if (isVendor(vendorId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['storeName', 'description', 'logoURL', 'bannerURL', 'email', 'phone', 'gstNumber', 'panNumber',
+                        'address', 'isOpen', 'pauseReason', 'openingHours', 'prepTimeDays',
+                        'shippingPolicy', 'returnPolicy', 'returnWindowDays', 'updatedAt']))
         || isAdmin();
+    }
+
+    // Payout bank details: readable only by the store owner and admins (the public vendor record is open to everyone).
+    match /vendorPrivate/{vendorId} {
+      allow read: if isAdmin() || isVendor(vendorId);
+      allow create, update: if isVendor(vendorId)
+        && request.resource.data.keys().hasOnly(['bankDetails', 'userId', 'createdAt', 'updatedAt']);
+      allow delete: if false;
     }
 
     match /vendorApplications/{appId} {
@@ -178,11 +344,18 @@ service cloud.firestore {
     // ===== DRIVERS =====
     match /drivers/{driverId} {
       allow read: if isAdmin() || isDriver(driverId);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isDriver(driverId)
-        && !('status' in request.resource.data.diff(resource.data).affectedKeys())
-        && !('totalEarnings' in request.resource.data.diff(resource.data).affectedKeys())
-        || isAdmin();
+      // New driver profiles can only be created as pending; admins approve them.
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending_review';
+      allow update: if isAdmin()
+        || (isDriver(driverId)
+          // A driver may change availability and their own contact/payout details, never approval state, vehicle/licence or earnings.
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['isOnline', 'status', 'currentLocation', 'lastSeenAt', 'updatedAt',
+                       'displayName', 'phone', 'serviceArea', 'emergencyContact', 'bankDetails'])
+          && (!('status' in request.resource.data.diff(resource.data).affectedKeys())
+              || (resource.data.status in ['approved', 'active', 'offline']
+                  && request.resource.data.status in ['active', 'offline'])));
     }
 
     match /driverApplications/{appId} {

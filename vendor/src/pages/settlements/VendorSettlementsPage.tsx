@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useVendorAuth } from '../../context/AuthContext';
-import { getDocuments } from '@poeage/firebase-client';
+import { getDocuments, subscribeToDocument } from '@poeage/firebase-client';
+import { COLLECTION } from '@poeage/config';
+import type { VendorBankDetails } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
 import { Card, Badge, Spinner, Button } from '@poeage/ui';
 import {
@@ -31,6 +33,17 @@ export const VendorSettlementsPage: React.FC = () => {
   const { vendor, user } = useVendorAuth();
   const [ledger, setLedger] = useState<SettlementLedgerItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bank, setBank] = useState<VendorBankDetails | null>(null);
+
+  useEffect(() => {
+    if (!vendor?.id) return;
+    return subscribeToDocument<{ bankDetails?: VendorBankDetails }>(
+      COLLECTION.VENDOR_PRIVATE,
+      vendor.id,
+      (d) => setBank(d?.bankDetails ?? null),
+      () => setBank(null),
+    );
+  }, [vendor?.id]);
 
   const fetchLedger = async () => {
     setLoading(true);
@@ -123,10 +136,10 @@ export const VendorSettlementsPage: React.FC = () => {
             </div>
           </div>
           <p className="text-base font-bold text-gray-900 mt-2">
-            {vendor?.bankDetails?.bankName || 'HDFC Bank (Primary)'}
+            {bank?.bankName || 'No bank account added'}
           </p>
           <p className="text-[11px] text-gray-400 mt-1">
-            A/C: •••• {vendor?.bankDetails?.accountNumber?.slice(-4) || '9241'} · IFSC: {vendor?.bankDetails?.ifscCode || 'HDFC0001234'}
+            {bank?.accountNumber ? `A/C: •••• ${bank.accountNumber.slice(-4)} · IFSC: ${bank.ifscCode}` : 'Add your bank account in Store Settings to receive payouts.'}
           </p>
         </Card>
       </div>

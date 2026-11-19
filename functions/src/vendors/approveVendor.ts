@@ -21,7 +21,11 @@ export const approveVendor = https.onCall({ cors: true }, async (request) => {
     throw new HttpsError('permission-denied', 'Only administrators can approve vendors.');
   }
 
-  const { vendorId, approved, reviewNote, commissionRate = 0.12 } = request.data as ApproveVendorInput;
+  const { vendorId, approved, reviewNote, commissionRate: requestedRate } = request.data as ApproveVendorInput;
+  const settingsSnap = await adminDb.collection('platformSettings').doc('global').get();
+  const settingsRate = settingsSnap.exists ? settingsSnap.data()!['defaultCommissionRate'] : undefined;
+  const commissionRate: number =
+    typeof requestedRate === 'number' ? requestedRate : typeof settingsRate === 'number' ? settingsRate : 0.12;
   if (!vendorId) {
     throw new HttpsError('invalid-argument', 'vendorId is required.');
   }

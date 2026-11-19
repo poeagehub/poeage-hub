@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useSettings } from '../../context/SettingsContext';
 import { formatMoney } from '@poeage/utils';
 import { Button, Input, Card, Badge } from '@poeage/ui';
 import {
@@ -37,10 +38,13 @@ export const CartPage: React.FC = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponFeedback, setCouponFeedback] = useState<{ isSuccess: boolean; text: string } | null>(null);
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
-  const freeShippingThreshold = 49900;
-  const amountNeededForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-  const freeShippingPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
+  // Free-delivery threshold comes from admin Settings. 0 means delivery is never free.
+  const freeShippingThreshold = Number(settings.freeDeliveryThreshold) || 0;
+  const hasFreeShipping = freeShippingThreshold > 0;
+  const amountNeededForFreeShipping = hasFreeShipping ? Math.max(0, freeShippingThreshold - subtotal) : 0;
+  const freeShippingPercent = hasFreeShipping ? Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100)) : 0;
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,11 +83,11 @@ export const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-44 lg:pb-8">
       {/* Title & Clear Action */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3 sm:pb-4 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Shopping Cart</h1>
+          <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Shopping Cart</h1>
           <p className="text-sm text-gray-500 mt-1">
             {itemCount} {itemCount === 1 ? 'item' : 'items'} in your basket
           </p>
@@ -98,7 +102,8 @@ export const CartPage: React.FC = () => {
       </div>
 
       {/* Free Shipping Progress */}
-      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+      {hasFreeShipping && (
+      <div className="mb-4 sm:mb-6 bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between text-xs font-semibold text-blue-900 mb-2">
           <span className="flex items-center gap-1.5">
             <Truck className="w-4 h-4 text-blue-600" />
@@ -115,35 +120,36 @@ export const CartPage: React.FC = () => {
           />
         </div>
       </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
         {/* Left Column: Line Items */}
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 shadow-sm overflow-hidden">
             {items.map((item) => (
-              <div key={`${item.productId}-${item.variantId || 'base'}`} className="p-4 sm:p-5 flex gap-4 sm:gap-6">
+              <div key={`${item.productId}-${item.variantId || 'base'}`} className="p-3 sm:p-5 flex gap-3 sm:gap-6">
                 {/* Thumbnail */}
                 <Link to={`/product/${item.productId}`} className="flex-shrink-0">
                   <img
                     src={item.imageURL}
-                    alt={item.name}
-                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-gray-100 hover:opacity-90 transition-opacity"
+                    alt={item.name ?? 'Product'}
+                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-gray-100 bg-gray-50 hover:opacity-90 transition-opacity"
                   />
                 </Link>
 
                 {/* Details */}
-                <div className="flex-1 flex flex-col justify-between">
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <Link
                         to={`/product/${item.productId}`}
-                        className="font-bold text-gray-900 text-sm sm:text-base hover:text-blue-600 line-clamp-1"
+                        className="font-bold text-gray-900 text-sm sm:text-base hover:text-blue-600 line-clamp-2 leading-snug"
                       >
                         {item.name}
                       </Link>
                       <button
                         onClick={() => removeFromCart(item.productId, item.variantId)}
-                        className="text-gray-400 hover:text-red-600 p-1 rounded-md transition-colors"
+                        className="text-gray-400 hover:text-red-600 active:text-red-600 -m-1 p-2 rounded-lg transition-colors flex-shrink-0"
                         title="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -151,9 +157,8 @@ export const CartPage: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="default" className="text-[10px] bg-gray-100 text-gray-700">
-                        Vendor SKU: {item.vendorId.slice(0, 8)}
+                        Qty {item.quantity}
                       </Badge>
-                      <span className="text-xs text-green-600 font-medium">In Stock</span>
                     </div>
                   </div>
 
@@ -162,15 +167,15 @@ export const CartPage: React.FC = () => {
                     <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-white shadow-xs">
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity - 1, item.variantId)}
-                        className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 transition-colors"
+                        className="w-9 h-9 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-100 transition-colors"
                         aria-label="Decrease quantity"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="px-3 py-1 text-xs font-bold text-gray-900">{item.quantity}</span>
+                      <span className="min-w-[2rem] text-center px-1 sm:px-3 py-1 text-sm sm:text-xs font-bold text-gray-900">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1, item.variantId)}
-                        className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 transition-colors"
+                        className="w-9 h-9 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-100 transition-colors"
                         aria-label="Increase quantity"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -178,7 +183,7 @@ export const CartPage: React.FC = () => {
                     </div>
 
                     <div className="text-right">
-                      <div className="text-base sm:text-lg font-black text-gray-900">
+                      <div className="text-base sm:text-lg font-black text-gray-900 whitespace-nowrap">
                         {formatMoney(item.totalPrice)}
                       </div>
                       {item.quantity > 1 && (
@@ -194,7 +199,7 @@ export const CartPage: React.FC = () => {
           </div>
 
           {/* Trust Guarantees */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="hidden sm:grid grid-cols-3 gap-3 pt-2">
             <div className="p-3 bg-white rounded-xl border border-gray-200 flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <div className="text-xs">
@@ -221,8 +226,8 @@ export const CartPage: React.FC = () => {
 
         {/* Right Column: Order Summary */}
         <div className="lg:col-span-4 space-y-4">
-          <Card className="p-6">
-            <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4">
+          <Card className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4">
               Order Summary
             </h2>
 
@@ -292,10 +297,10 @@ export const CartPage: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g. WELCOME100, SUPER10"
+                      placeholder="Enter coupon code"
                       value={inputCoupon}
                       onChange={(e) => setInputCoupon(e.target.value)}
-                      className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg uppercase tracking-wider focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="flex-1 min-w-0 px-3 py-2.5 text-sm border border-gray-300 rounded-lg uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                     <Button
                       type="submit"
@@ -324,7 +329,7 @@ export const CartPage: React.FC = () => {
             </div>
 
             {/* Checkout Button */}
-            <div className="mt-6">
+            <div className="mt-6 hidden lg:block">
               <Button
                 onClick={() => navigate('/checkout')}
                 size="lg"
@@ -336,6 +341,21 @@ export const CartPage: React.FC = () => {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* Phone: checkout bar pinned above the tab bar */}
+      <div className="lg:hidden fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,.06)] px-3 py-2.5 flex items-center gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] text-gray-500 leading-none">{itemCount} {itemCount === 1 ? 'item' : 'items'} · Total</p>
+          <p className="text-lg font-black text-gray-900 leading-tight">{formatMoney(grandTotal)}</p>
+        </div>
+        <button
+          onClick={() => navigate('/checkout')}
+          className="flex-1 h-12 rounded-xl bg-blue-600 active:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
+        >
+          Checkout
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

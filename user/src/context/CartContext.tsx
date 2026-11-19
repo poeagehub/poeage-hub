@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createStableContext } from '@poeage/ui';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import type { CartItem, Product } from '@poeage/types';
 import { useAuth } from './AuthContext';
 import { getDocument, setDocument } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
+import { useSettings } from './SettingsContext';
 
 interface CartContextType {
   items: CartItem[];
@@ -21,17 +23,34 @@ interface CartContextType {
 }
 
 const LOCAL_STORAGE_KEY = 'poeage_hub_cart';
-const FREE_SHIPPING_THRESHOLD = 49900; // ₹499 in paise
-const STANDARD_DELIVERY_FEE = 5000; // ₹50 in paise
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const CartContext = createStableContext<CartContextType | undefined>('ShopCart', undefined);
+
+/** Drop anything in a saved cart that is not a complete item, so an old or damaged entry can never crash the cart page. */
+function cleanCartItems(raw: unknown): CartItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (i): i is CartItem =>
+        !!i &&
+        typeof i.productId === 'string' &&
+        typeof i.vendorId === 'string' &&
+        typeof i.name === 'string' &&
+        Number.isFinite(i.quantity) &&
+        i.quantity > 0 &&
+        Number.isFinite(i.unitPrice) &&
+        Number.isFinite(i.totalPrice),
+    )
+    .map((i) => ({ ...i, imageURL: typeof i.imageURL === 'string' ? i.imageURL : '' }));
+}
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { settings } = useSettings();
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? cleanCartItems(JSON.parse(saved)) : [];
     } catch {
       return [];
     }
@@ -62,8 +81,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (remote?.items && remote.items.length > 0) {
           // Merge remote items with local items (avoid duplicates)
           setItems((local) => {
-            const merged = [...remote.items!];
-            for (const item of local) {
+            const merged = cleanCartItems(remote.items);
+            for (const item of cleanCartItems(local)) {
               if (!merged.some((m) => m.productId === item.productId && m.variantId === item.variantId)) {
                 merged.push(item);
               }
@@ -107,7 +126,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Calculations
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  const deliveryCharge = subtotal >= FREE_SHIPPING_THRESHOLD || items.length === 0 ? 0 : STANDARD_DELIVERY_FEE;
+  const qualifiesForFreeDelivery =
+    settings.freeDeliveryThreshold > 0 && subtotal >= settings.freeDeliveryThreshold;
+  const deliveryCharge = items.length === 0 || qualifiesForFreeDelivery ? 0 : settings.deliveryChargeFlat;
   const grandTotal = Math.max(0, subtotal + deliveryCharge - couponDiscount);
 
   const addToCart = useCallback((product: Product, quantity = 1, variantId?: string) => {
@@ -117,7 +138,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
 
       const unitPrice = product.basePrice;
-      const imageURL = product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+      const imageURL = product.images?.[0] || '';
 
       if (existingIndex > -1) {
         const updated = [...prev];
@@ -189,27 +210,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanCode = code.trim().toUpperCase();
     if (!cleanCode) {
       return { success: false, message: 'Please enter a coupon code.' };
-    }
-
-    // Common promotional coupons supported out of the box
-    if (cleanCode === 'WELCOME100') {
-      if (subtotal < 50000) {
-        return { success: false, message: 'WELCOME100 requires a minimum order of ₹500.' };
-      }
-      setCouponCode('WELCOME100');
-      setCouponDiscount(10000); // ₹100 discount
-      return { success: true, message: 'Coupon WELCOME100 applied! ₹100 saved.' };
-    }
-
-    if (cleanCode === 'SUPER10') {
-      if (subtotal < 100000) {
-        return { success: false, message: 'SUPER10 requires a minimum order of ₹1,000.' };
-      }
-      const disc = Math.round(subtotal * 0.1);
-      const capped = Math.min(disc, 20000); // ₹200 cap
-      setCouponCode('SUPER10');
-      setCouponDiscount(capped);
-      return { success: true, message: `Coupon SUPER10 applied! ₹${(capped / 100).toFixed(2)} saved.` };
     }
 
     // Try fetching from Firestore collection

@@ -27,6 +27,8 @@ export {
   runTransaction,
   writeBatch,
   serverTimestamp,
+  arrayUnion,
+  deleteField,
   Timestamp,
   getDocument,
   getDocuments,
@@ -51,6 +53,8 @@ export {
   uploadFile,
   uploadUserAvatar,
   uploadProductImage,
+  uploadVendorProductImage,
+  isStorageAvailable,
   uploadVendorAsset,
   deleteFile,
   getFileURL,
@@ -59,3 +63,12 @@ export {
 
 export { callFunction, httpsCallable } from './functions.ts';
 
+
+export { friendlyError } from './errors.ts';
+
+export {
+  DEFAULT_PLATFORM_SETTINGS,
+  getPlatformSettings,
+  subscribePlatformSettings,
+  type PlatformSettingsData,
+} from './platformSettings.ts';

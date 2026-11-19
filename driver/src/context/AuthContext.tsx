@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createStableContext } from '@poeage/ui';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   auth,
   signIn,
@@ -6,10 +7,10 @@ import {
   logout,
   onAuthChange,
   getDocument,
+  subscribeToDocument,
   setDocument,
   updateDocument,
-  type User,
-} from '@poeage/firebase-client';
+  type User, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Driver, DriverStatus, VehicleType } from '@poeage/types';
 
@@ -37,7 +38,7 @@ interface DriverAuthContextType {
   clearError: () => void;
 }
 
-const DriverAuthContext = createContext<DriverAuthContextType | undefined>(undefined);
+const DriverAuthContext = createStableContext<DriverAuthContextType | undefined>('DriverAuth', undefined);
 
 export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,6 +74,21 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => unsubscribe();
   }, []);
 
+  // Keep the driver profile live so admin approval/rejection shows up without a manual refresh.
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToDocument<Driver>(
+      COLLECTION.DRIVERS,
+      user.uid,
+      (d) => {
+        setDriver(d);
+        if (d) setIsOnline(d.isOnline ?? false);
+      },
+      (err) => console.error('[DriverAuth] Live driver profile listener failed:', err),
+    );
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   const loginDriver = async (email: string, pass: string) => {
     setError(null);
     setLoading(true);
@@ -80,7 +96,7 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const cred = await signIn(email, pass);
       await fetchDriverData(cred.user.uid);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to sign in to driver portal.';
+      const msg = friendlyError(err, 'Failed to sign in to driver portal.');
       setError(msg);
       throw err;
     } finally {
@@ -101,7 +117,7 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'active',
       });
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to create driver account.';
+      const msg = friendlyError(err, 'Failed to create driver account.');
       setError(msg);
       throw err;
     } finally {
@@ -138,7 +154,7 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await setDocument(COLLECTION.DRIVERS, user.uid, driverDoc);
       await fetchDriverData(user.uid);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to submit onboarding profile.';
+      const msg = friendlyError(err, 'Failed to submit onboarding profile.');
       setError(msg);
       throw err;
     } finally {
@@ -158,6 +174,7 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (err) {
       console.error('Failed to toggle driver availability:', err);
       setIsOnline(!nextState);
+      setError(friendlyError(err, 'Could not change availability. Please try again.'));
     }
   };
 

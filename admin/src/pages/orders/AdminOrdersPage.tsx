@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getDocuments, updateDocument } from '@poeage/firebase-client';
-import { COLLECTION } from '@poeage/config';
+import { subscribeOrdersWithLiveStatus, type LiveOrder } from '../../lib/liveOrders';
+import { friendlyError } from '@poeage/firebase-client';
 import type { Order, OrderStatus } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
 import { Button, Card, Badge, Spinner } from '@poeage/ui';
@@ -19,32 +19,35 @@ import {
 } from 'lucide-react';
 
 export const AdminOrdersPage: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<LiveOrder[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedOrder = orders.find((o) => o.id === selectedId) ?? null;
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const list = await getDocuments<Order>(COLLECTION.ORDERS);
-      const sorted = list.sort((a, b) => {
-        const timeA = (a.createdAt as any)?.seconds || 0;
-        const timeB = (b.createdAt as any)?.seconds || 0;
-        return timeB - timeA;
-      });
-      setOrders(sorted);
-    } catch (err) {
-      console.warn('Failed to fetch admin orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Live: statuses change as sellers pack and drivers deliver.
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    setLoading(true);
+    setLoadError(null);
+    return subscribeOrdersWithLiveStatus(
+      (list) => {
+        setOrders(
+          [...list].sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0)),
+        );
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('Failed to fetch admin orders:', err);
+        setLoadError(friendlyError(err, 'Could not load orders.'));
+        setLoading(false);
+      },
+    );
+  }, [reloadKey]);
+
+  const fetchOrders = () => setReloadKey((k) => k + 1);
 
   const filteredOrders = orders.filter((o) => {
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
@@ -55,6 +58,20 @@ export const AdminOrdersPage: React.FC = () => {
       o.shippingAddress.phone.includes(searchQuery);
     return matchesStatus && matchesSearch;
   });
+
+  const getStageBadge = (o: LiveOrder) => {
+    const stageClass =
+      o.status === 'delivered'
+        ? 'bg-green-100 text-green-700'
+        : o.status === 'cancelled'
+        ? 'bg-red-100 text-red-700'
+        : o.status === 'out_for_delivery'
+        ? 'bg-sky-100 text-sky-800'
+        : o.status === 'processing'
+        ? 'bg-purple-100 text-purple-700'
+        : 'bg-blue-100 text-blue-700';
+    return <Badge variant="default" className={stageClass}>{o.stage}</Badge>;
+  };
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -96,6 +113,10 @@ export const AdminOrdersPage: React.FC = () => {
           Refresh
         </Button>
       </div>
+
+      {loadError && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">{loadError}</div>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-3">
@@ -195,11 +216,11 @@ export const AdminOrdersPage: React.FC = () => {
                       {formatMoney(order.pricing.grandTotal)}
                     </td>
                     <td className="py-3.5 px-4">
-                      {getStatusBadge(order.status)}
+                      {getStageBadge(order)}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
-                        onClick={() => setSelectedOrder(order)}
+                        onClick={() => setSelectedId(order.id)}
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-200 inline-flex items-center gap-1"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -225,7 +246,7 @@ export const AdminOrdersPage: React.FC = () => {
                 <h2 className="text-lg font-bold text-gray-900 mt-0.5">Order Inspector</h2>
               </div>
               <button
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => setSelectedId(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
@@ -236,7 +257,8 @@ export const AdminOrdersPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
               <div>
                 <span className="text-[11px] text-gray-400 block">Fulfillment Status</span>
-                <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                <div className="mt-1">{getStageBadge(selectedOrder)}</div>
+                {selectedOrder.stageDetail && <p className="text-[11px] text-gray-500 mt-1">{selectedOrder.stageDetail}</p>}
               </div>
               <div>
                 <span className="text-[11px] text-gray-400 block">Payment Method</span>
@@ -311,7 +333,7 @@ export const AdminOrdersPage: React.FC = () => {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={() => setSelectedOrder(null)}>Close Inspector</Button>
+              <Button onClick={() => setSelectedId(null)}>Close Inspector</Button>
             </div>
           </div>
         </div>

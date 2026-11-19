@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createStableContext } from '@poeage/ui';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   auth,
   signIn,
@@ -6,6 +7,7 @@ import {
   onAuthChange,
   getDocument,
   getIdTokenResult,
+  friendlyError,
   type User,
 } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
@@ -23,7 +25,7 @@ interface AdminAuthContextType {
   clearError: () => void;
 }
 
-const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
+const AdminAuthContext = createStableContext<AdminAuthContextType | undefined>('AdminAuth', undefined);
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -52,9 +54,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const adminRolePresent =
             mergedRoles.some((r) =>
               ['admin', 'super_admin', 'operations_admin', 'support_admin'].includes(r)
-            ) ||
-            firebaseUser.email?.toLowerCase().includes('admin') ||
-            firebaseUser.email?.toLowerCase() === 'demo@k7fitness.app';
+            );
           setIsAdmin(adminRolePresent);
           setProfile(userProfile);
         } catch (err) {
@@ -85,9 +85,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const isPermitted =
         mergedRoles.some((r) =>
           ['admin', 'super_admin', 'operations_admin', 'support_admin'].includes(r)
-        ) ||
-        email.toLowerCase().includes('admin') ||
-        email.toLowerCase() === 'demo@k7fitness.app';
+        );
 
       if (!isPermitted) {
         // If not admin, sign out immediately
@@ -97,7 +95,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setIsAdmin(true);
       setUser(cred.user);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to sign in.';
+      const { code } = err as { code?: string };
+      let msg = friendlyError(err, 'Failed to sign in.');
+      if (code === 'unavailable' || code === 'permission-denied') {
+        msg =
+          'Signed in, but the Firestore database is unreachable. Make sure Cloud Firestore is created for this Firebase project and that your users/<uid> document exists.';
+        await logout().catch(() => {});
+      }
       setError(msg);
       throw err;
     } finally {

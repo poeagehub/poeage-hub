@@ -35,7 +35,7 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Account Profile</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Account Profile</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your personal information and security settings.</p>
       </div>
 

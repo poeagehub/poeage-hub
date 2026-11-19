@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useVendorAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { Store, AlertCircle } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const VendorRegisterPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -35,7 +36,7 @@ export const VendorRegisterPage: React.FC = () => {
       await registerVendorAccount(email, password, name);
       navigate('/onboarding', { replace: true });
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Failed to create seller account.');
+      setErrorMsg(friendlyError(err, 'Failed to create seller account.'));
     } finally {
       setLoading(false);
     }

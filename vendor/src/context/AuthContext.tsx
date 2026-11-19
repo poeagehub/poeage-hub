@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createStableContext } from '@poeage/ui';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   auth,
   signIn,
@@ -6,9 +7,10 @@ import {
   logout,
   onAuthChange,
   getDocument,
+  subscribeToDocument,
+  getPlatformSettings,
   setDocument,
-  type User,
-} from '@poeage/firebase-client';
+  type User, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Vendor, VendorStatus } from '@poeage/types';
 
@@ -42,7 +44,7 @@ interface VendorAuthContextType {
   clearError: () => void;
 }
 
-const VendorAuthContext = createContext<VendorAuthContextType | undefined>(undefined);
+const VendorAuthContext = createStableContext<VendorAuthContextType | undefined>('VendorAuth', undefined);
 
 export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,6 +75,18 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => unsubscribe();
   }, []);
 
+  // Keep the vendor profile live so admin approval/rejection shows up without a manual refresh.
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToDocument<Vendor>(
+      COLLECTION.VENDORS,
+      user.uid,
+      (v) => setVendor(v),
+      (err) => console.error('[VendorAuth] Live vendor profile listener failed:', err),
+    );
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   const loginVendor = async (email: string, pass: string) => {
     setError(null);
     setLoading(true);
@@ -80,7 +94,7 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const cred = await signIn(email, pass);
       await fetchVendorData(cred.user.uid);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to sign in to vendor portal.';
+      const msg = friendlyError(err, 'Failed to sign in to vendor portal.');
       setError(msg);
       throw err;
     } finally {
@@ -102,7 +116,7 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'active',
       });
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to register account.';
+      const msg = friendlyError(err, 'Failed to register account.');
       setError(msg);
       throw err;
     } finally {
@@ -115,6 +129,8 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setError(null);
     setLoading(true);
     try {
+      // New stores start at the platform's current default commission (admin-managed in Settings).
+      const defaultCommissionRate = (await getPlatformSettings()).defaultCommissionRate;
       const vendorDoc = {
         id: user.uid,
         userId: user.uid,
@@ -126,7 +142,7 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         gstNumber: data.gstNumber || '',
         panNumber: data.panNumber || '',
         status: 'pending_review' as VendorStatus,
-        commissionRate: 0.10, // 10%
+        commissionRate: defaultCommissionRate,
         address: data.address,
         metadata: {
           totalSales: 0,
@@ -142,7 +158,7 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await setDocument(COLLECTION.VENDORS, user.uid, vendorDoc);
       await fetchVendorData(user.uid);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to submit application.';
+      const msg = friendlyError(err, 'Failed to submit application.');
       setError(msg);
       throw err;
     } finally {

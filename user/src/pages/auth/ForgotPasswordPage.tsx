@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export const ForgotPasswordPage: React.FC = () => {
       await sendPasswordReset(email);
       setSubmitted(true);
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Failed to send reset link.');
+      setErrorMsg(friendlyError(err, 'Failed to send reset link.'));
     } finally {
       setLoading(false);
     }

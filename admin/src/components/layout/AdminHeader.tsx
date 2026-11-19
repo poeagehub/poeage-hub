@@ -10,7 +10,6 @@ export const AdminHeader: React.FC = () => {
     <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-bold text-gray-900">Control Center</h1>
-        <Badge variant="info">Phase 2: Auth Active</Badge>
       </div>
 
       <div className="flex items-center gap-4">

@@ -279,14 +279,8 @@ export const AdminDriversPage: React.FC = () => {
                     <div className="flex items-center gap-4 text-xs">
                       <div>
                         <span className="text-gray-400 block text-[10px]">Driver Earning</span>
-                        <span className="font-bold text-gray-900">{formatMoney(del.driverEarning || 5000)}</span>
+                        <span className="font-bold text-gray-900">{formatMoney(del.driverEarning || 0)}</span>
                       </div>
-                      {(del as any).verificationOtp && (
-                        <div>
-                          <span className="text-gray-400 block text-[10px]">Verification OTP</span>
-                          <span className="font-mono font-bold text-blue-600">{(del as any).verificationOtp}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useDriverAuth } from '../../context/AuthContext';
-import { getDocuments } from '@poeage/firebase-client';
+import { getDocuments, where } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Delivery } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
 import { Card, CardContent, Button, Spinner } from '@poeage/ui';
-import { Wallet, TrendingUp, Building, ArrowUpRight, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Wallet, TrendingUp, Building, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
 export const DriverEarningsPage: React.FC = () => {
   const { driver, user } = useDriverAuth();
@@ -16,14 +17,15 @@ export const DriverEarningsPage: React.FC = () => {
     const fetchEarnings = async () => {
       setLoading(true);
       try {
-        const all = await getDocuments<Delivery>(COLLECTION.DELIVERIES);
         const driverId = driver?.id || user?.uid;
-        const mine = all.filter(
-          (d) => (d.driverId === driverId || d.driverId === user?.uid) && d.status === 'delivered'
-        );
+        if (!driverId) return;
+        const mine = await getDocuments<Delivery>(COLLECTION.DELIVERIES, [
+          where('driverId', '==', driverId),
+          where('status', '==', 'delivered'),
+        ]);
         setCompletedDeliveries(mine);
       } catch (err) {
-        console.warn('Earnings fetch warning:', err);
+        console.error('Earnings fetch failed:', err);
       } finally {
         setLoading(false);
       }
@@ -33,7 +35,7 @@ export const DriverEarningsPage: React.FC = () => {
   }, [driver, user]);
 
   const totalEarningsPaise = completedDeliveries.reduce(
-    (sum, d) => sum + (d.driverEarning || 5000),
+    (sum, d) => sum + (d.driverEarning || 0),
     0
   );
 
@@ -65,19 +67,26 @@ export const DriverEarningsPage: React.FC = () => {
       </Card>
 
       {/* Linked Bank Account */}
-      <Card className="border-slate-800 bg-slate-900 text-white p-5 space-y-3">
+      <Card className="text-white border-slate-800 bg-slate-900 text-white p-5 space-y-3">
         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
           <Building className="w-4 h-4 text-emerald-400" />
           Direct Deposit Bank Account
         </h3>
-        <div className="p-3 bg-slate-800/80 rounded-xl text-xs space-y-1">
-          <p className="font-bold text-white">State Bank of India (SBI)</p>
-          <p className="text-slate-400">Account: •••• 6184 · IFSC: SBIN0004123</p>
-          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold pt-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Verified for weekly automated transfers
+        {driver?.bankDetails?.accountNumber ? (
+          <div className="p-3 bg-slate-800/80 rounded-xl text-xs space-y-1">
+            <p className="font-bold text-white">{driver.bankDetails.bankName}</p>
+            <p className="text-slate-400">
+              Account: •••• {driver.bankDetails.accountNumber.slice(-4)} · IFSC: {driver.bankDetails.ifscCode}
+            </p>
           </div>
-        </div>
+        ) : (
+          <div className="p-3 bg-slate-800/80 rounded-xl text-xs space-y-2">
+            <p className="text-slate-300">No bank account added yet. Add one to receive your payouts.</p>
+            <Link to="/profile" className="inline-block font-semibold text-amber-400 hover:text-amber-300">
+              Add bank account →
+            </Link>
+          </div>
+        )}
       </Card>
 
       {/* Trust & Guarantee */}

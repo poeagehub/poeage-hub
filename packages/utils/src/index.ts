@@ -1,3 +1,6 @@
+export { deriveOrderStatus } from './orderStatus.ts';
+export type { DerivedOrder, DerivedOrderStatus } from './orderStatus.ts';
+
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

@@ -2,8 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { SettingsProvider } from './context/SettingsContext';
+import { MaintenanceGate } from './components/MaintenanceGate';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
+import { MobileTabBar } from './components/layout/MobileTabBar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -32,6 +35,8 @@ const NotFoundPage: React.FC = () => (
 
 export default function App() {
   return (
+    <SettingsProvider>
+    <MaintenanceGate>
     <AuthProvider>
       <CartProvider>
         <BrowserRouter>
@@ -92,9 +97,12 @@ export default function App() {
               </Routes>
             </main>
             <Footer />
+            <MobileTabBar />
           </div>
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>
+    </MaintenanceGate>
+    </SettingsProvider>
   );
 }

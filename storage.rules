@@ -40,10 +40,11 @@ service firebase.storage {
       allow write: if isAuthenticated() && isValidImage();
     }
 
-    // Product images - authenticated vendor writes, public reads
-    match /products/{productId}/{allPaths=**} {
+    // Product images - only the owning vendor writes (products/<vendorUid>/<productId>/<file>), public reads
+    match /products/{vendorId}/{productId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && isValidImage();
+      allow create, update: if isCurrentUser(vendorId) && isValidImage();
+      allow delete: if isCurrentUser(vendorId) || isAdmin();
     }
 
     // Private verification documents - owner writes, admin reads only

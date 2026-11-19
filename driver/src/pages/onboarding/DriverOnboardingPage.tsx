@@ -4,6 +4,7 @@ import { useDriverAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
 import { Truck, AlertCircle } from 'lucide-react';
 import type { VehicleType } from '@poeage/types';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const DriverOnboardingPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
@@ -32,7 +33,7 @@ export const DriverOnboardingPage: React.FC = () => {
       });
       navigate('/status', { replace: true });
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Failed to submit driver details.');
+      setErrorMsg(friendlyError(err, 'Failed to submit driver details.'));
     } finally {
       setLoading(false);
     }

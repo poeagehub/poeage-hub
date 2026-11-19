@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createStableContext } from '@poeage/ui';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   auth,
   signIn,
@@ -9,8 +10,7 @@ import {
   onAuthChange,
   getDocument,
   setDocument,
-  type User,
-} from '@poeage/firebase-client';
+  type User, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { UserProfile, UserRole } from '@poeage/types';
 
@@ -28,7 +28,7 @@ interface AuthContextType {
   clearError: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createStableContext<AuthContextType | undefined>('ShopAuth', undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signIn(email, pass);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to sign in. Please verify your credentials.';
+      const msg = friendlyError(err, 'Failed to sign in. Please verify your credentials.');
       setError(msg);
       throw err;
     } finally {
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await setDocument(COLLECTION.USERS, credential.user.uid, newProfile);
       setProfile({ id: credential.user.uid, ...newProfile } as unknown as UserProfile);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to create account.';
+      const msg = friendlyError(err, 'Failed to create account.');
       setError(msg);
       throw err;
     } finally {
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile({ id: credential.user.uid, ...newProfile } as unknown as UserProfile);
       }
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Google sign in failed.';
+      const msg = friendlyError(err, 'Google sign in failed.');
       setError(msg);
       throw err;
     } finally {
@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await resetPassword(email);
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message || 'Failed to send password reset email.';
+      const msg = friendlyError(err, 'Failed to send password reset email.');
       setError(msg);
       throw err;
     }

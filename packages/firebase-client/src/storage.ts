@@ -9,6 +9,31 @@ import { firebaseStorage } from './config.ts';
 
 export const storage = firebaseStorage;
 
+/**
+ * Quick check that the project's Storage bucket exists and is reachable.
+ * Uploads are sent as a pre-flighted cross-origin POST; a missing bucket answers that pre-flight
+ * with a bare 404 (no CORS headers), which makes the request throw. We send the same kind of request
+ * with no file and no credentials, so it can never create an object.
+ */
+export async function isStorageAvailable(): Promise<boolean> {
+  const bucket = firebaseStorage.app.options.storageBucket;
+  if (!bucket) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    await fetch(`https://firebasestorage.googleapis.com/v0/b/${bucket}/o`, {
+      method: 'POST',
+      headers: { 'X-Goog-Upload-Protocol': 'resumable' },
+      signal: controller.signal,
+    });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface UploadProgress {
   bytesTransferred: number;
   totalBytes: number;
@@ -30,9 +55,24 @@ export function uploadFile(
       contentType: file.type,
     });
 
+    // If Storage isn't set up (no bucket) the SDK just retries silently and progress stays at 0%.
+    // Fail fast with a clear error instead of spinning forever.
+    let settled = false;
+    const stallTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      task.cancel();
+      reject(
+        Object.assign(new Error('Firebase Storage is not reachable or not enabled for this project.'), {
+          code: 'storage/bucket-not-found',
+        }),
+      );
+    }, 15000);
+
     task.on(
       'state_changed',
       (snapshot) => {
+        if (snapshot.bytesTransferred > 0) clearTimeout(stallTimer);
         if (onProgress) {
           onProgress({
             bytesTransferred: snapshot.bytesTransferred,
@@ -42,10 +82,21 @@ export function uploadFile(
           });
         }
       },
-      (error) => reject(error),
+      (error) => {
+        clearTimeout(stallTimer);
+        if (settled) return;
+        settled = true;
+        reject(error);
+      },
       async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        resolve(url);
+        clearTimeout(stallTimer);
+        if (settled) return;
+        settled = true;
+        try {
+          resolve(await getDownloadURL(task.snapshot.ref));
+        } catch (err) {
+          reject(err);
+        }
       },
     );
   });
@@ -75,6 +126,22 @@ export async function uploadProductImage(
 ): Promise<string> {
   const ext = file.name.split('.').pop() ?? 'jpg';
   const path = `products/${productId}/${index}-${Date.now()}.${ext}`;
+  return uploadFile(path, file, onProgress);
+}
+
+/**
+ * Upload an image for a vendor's product. Stored under the vendor's own folder so
+ * storage rules can restrict writes to that vendor.
+ */
+export async function uploadVendorProductImage(
+  vendorId: string,
+  productId: string,
+  file: File,
+  index: number,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<string> {
+  const ext = (file.name.split('.').pop() ?? 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `products/${vendorId}/${productId}/${index}-${Date.now()}.${ext}`;
   return uploadFile(path, file, onProgress);
 }
 

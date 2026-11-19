@@ -111,6 +111,14 @@ export interface Vendor extends BaseDocument {
   panNumber?: string;
   bankDetails?: VendorBankDetails;
   address: Omit<Address, keyof BaseDocument | 'userId' | 'isDefault' | 'label' | 'recipientName'>;
+  /** false = store paused: customers cannot place new orders. Missing means open. */
+  isOpen?: boolean;
+  pauseReason?: string;
+  openingHours?: Record<string, { open: boolean; from: string; to: string }>;
+  prepTimeDays?: number;
+  shippingPolicy?: string;
+  returnPolicy?: string;
+  returnWindowDays?: number;
   metadata: {
     totalSales: number; // paise
     totalOrders: number;
@@ -154,6 +162,8 @@ export interface Driver extends BaseDocument {
   isOnline: boolean;
   currentLocation?: GeoPoint;
   serviceZoneId?: string;
+  serviceArea?: string; // free-text preferred area/city
+  emergencyContact?: { name: string; phone: string; relation?: string };
   fcmToken?: string;
   bankDetails?: VendorBankDetails;
   metadata: {
@@ -201,10 +211,13 @@ export interface Product extends BaseDocument {
   shortDescription?: string;
   images: string[]; // storage URLs
   status: ProductStatus;
-  basePrice: number; // paise
-  salePrice?: number; // paise
-  costPrice?: number; // paise (vendor's cost — not shown to customers)
-  commissionRate: number; // set by admin
+  basePrice: number; // paise — what the customer pays today (offer price if set, else selling price)
+  salePrice?: number; // paise — MRP shown struck-through when higher than basePrice
+  mrp?: number; // paise — maximum retail price
+  sellingPrice?: number; // paise — vendor's regular selling price (<= MRP)
+  offerPrice?: number; // paise — optional promotional price (< selling price)
+  costPrice?: number; // paise — vendor's production cost (never shown to customers)
+  commissionRate: number; // platform commission, set by admin (0.10 = 10%)
   tags: string[];
   isFeatured: boolean;
   dimensions?: ProductDimensions;
@@ -233,6 +246,19 @@ export interface ProductVariant extends BaseDocument {
 }
 
 // ===== INVENTORY =====
+
+export interface InventoryLog extends BaseDocument {
+  vendorId: string;
+  productId: string;
+  productName: string;
+  type: 'add' | 'remove' | 'set' | 'order' | 'setup';
+  change: number;
+  before: number;
+  after: number;
+  reason: string;
+  note?: string;
+  actorId: string;
+}
 
 export interface Inventory extends BaseDocument {
   productId: string;
@@ -575,15 +601,28 @@ export interface SupportTicket extends BaseDocument {
 
 export interface PlatformSettings extends BaseDocument {
   id: 'global';
-  deliveryChargeFlat: number; // paise
-  freeDeliveryThreshold: number; // paise
-  defaultCommissionRate: number; // e.g. 0.12
-  driverEarningPerDelivery: number; // paise
-  gstOnCommission: number; // 0.18
+  // Identity & support
+  platformName: string;
   supportEmail: string;
   supportPhone: string;
+  supportHours: string;
+  // Delivery
+  deliveryChargeFlat: number; // paise
+  freeDeliveryThreshold: number; // paise
+  maxDeliveryRadiusKm: number;
+  // Commission, payouts & tax
+  defaultCommissionRate: number; // e.g. 0.12
+  gstOnCommission: number; // 0.18
+  driverEarningPerDelivery: number; // paise
+  defaultGstRate: number; // default product GST, e.g. 0.18
+  // Payments
+  razorpayKeyId: string; // public key id only — the secret lives in Cloud Functions config
+  // Operations
   maintenanceMode: boolean;
-  razorpayKeyId: string; // public key only
+  maintenanceMessage: string;
+  // Audit
+  updatedBy?: string;
+  updatedByEmail?: string;
 }
 
 export interface Banner extends BaseDocument {
@@ -610,6 +649,8 @@ export interface AuditLog extends BaseDocument {
   action: string;
   entityType: string;
   entityId: string;
+  actorEmail?: string;
+  changedFields?: string[];
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   ipAddress?: string;

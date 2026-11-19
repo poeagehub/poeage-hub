@@ -18,6 +18,7 @@ import {
 export const AdminSettlementsPage: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [banks, setBanks] = useState<Record<string, { bankName?: string; accountNumber?: string }>>({});
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -25,6 +26,9 @@ export const AdminSettlementsPage: React.FC = () => {
     try {
       const vList = await getDocuments<Vendor>(COLLECTION.VENDORS);
       setVendors(vList);
+      // Bank details are kept in a private record per vendor (admins can read all of them).
+      const priv = await getDocuments<{ id: string; bankDetails?: { bankName?: string; accountNumber?: string } }>(COLLECTION.VENDOR_PRIVATE).catch(() => []);
+      setBanks(Object.fromEntries(priv.map((p) => [p.id, p.bankDetails ?? {}])));
     } catch (err) {
       console.warn('Failed to load vendors:', err);
     } finally {
@@ -219,9 +223,9 @@ export const AdminSettlementsPage: React.FC = () => {
                         <span className="block text-[11px] font-normal text-gray-400">{vendor.email}</span>
                       </td>
                       <td className="py-3.5 px-4 text-gray-600">
-                        {vendor.bankDetails?.bankName || 'HDFC Bank'}
+                        {banks[vendor.id]?.bankName || 'No bank added'}
                         <p className="text-[11px] text-gray-400">
-                          A/C: •••• {vendor.bankDetails?.accountNumber?.slice(-4) || '9241'}
+                          {banks[vendor.id]?.accountNumber ? `A/C: •••• ${banks[vendor.id]?.accountNumber?.slice(-4)}` : 'Payout blocked until vendor adds bank details'}
                         </p>
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-gray-900">

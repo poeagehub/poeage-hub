@@ -12,9 +12,13 @@ import {
   collection,
   doc,
   writeBatch,
+  where,
+  getDocument,
+  getPlatformSettings,
+  friendlyError,
 } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
-import type { Address } from '@poeage/types';
+import type { Address, Vendor } from '@poeage/types';
 import { Button, Input, Card, Badge, Spinner } from '@poeage/ui';
 import {
   MapPin,
@@ -56,6 +60,11 @@ export const CheckoutPage: React.FC = () => {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
+  // The place-order button sits at the bottom on phones, so bring a failure message into view.
+  useEffect(() => {
+    if (orderError) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [orderError]);
+
   // Redirect if cart is empty
   useEffect(() => {
     if (items.length === 0 && !placingOrder) {
@@ -70,8 +79,7 @@ export const CheckoutPage: React.FC = () => {
     const fetchAddresses = async () => {
       setLoadingAddresses(true);
       try {
-        const list = await getDocuments<Address>(COLLECTION.ADDRESSES);
-        const userAddrs = list.filter((a) => a.userId === user.uid);
+        const userAddrs = await getDocuments<Address>(COLLECTION.ADDRESSES, [where('userId', '==', user.uid)]);
         setAddresses(userAddrs);
 
         if (userAddrs.length > 0) {
@@ -189,7 +197,10 @@ export const CheckoutPage: React.FC = () => {
         console.warn('Cloud Function createOrder unavailable or failed, applying client transaction fallback:', fnErr);
       }
 
-      // 2. Direct client fallback (guarantees local emulator/dev resilience)
+      // 2. Cloud Functions are not available on this project plan, so the order is written directly.
+      //    Firestore security rules re-verify the totals, the delivery fee (admin settings) and each
+      //    vendor's commission before accepting anything.
+      const liveSettings = await getPlatformSettings();
       const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       const orderNumber = `PHB-${datePart}-${randomSuffix}`;
@@ -210,17 +221,53 @@ export const CheckoutPage: React.FC = () => {
       const vendorOrderIds: string[] = [];
 
       for (const [vendorId, vendorItems] of itemsByVendor.entries()) {
+        const vendorDoc = await getDocument<Vendor>(COLLECTION.VENDORS, vendorId);
+        if (!vendorDoc || vendorDoc.status !== 'approved') {
+          throw new Error('Some items in your cart are from a store that is not accepting orders right now. Please remove them and try again.');
+        }
+        if (vendorDoc.isOpen === false) {
+          throw new Error(`${vendorDoc.storeName} has paused new orders for now. Please remove their items or try again later.`);
+        }
+
+        // Make sure the seller still has enough stock for what is in the cart.
+        const wanted = new Map<string, { qty: number; name: string }>();
+        for (const it of vendorItems) {
+          const w = wanted.get(it.productId) ?? { qty: 0, name: it.name };
+          w.qty += it.quantity;
+          wanted.set(it.productId, w);
+        }
+        for (const [pid, w] of wanted) {
+          const inv = await getDocument<{ quantity: number; reservedQuantity?: number }>(COLLECTION.INVENTORY, pid).catch(() => null);
+          if (inv && inv.quantity - (inv.reservedQuantity ?? 0) < w.qty) {
+            const left = Math.max(0, inv.quantity - (inv.reservedQuantity ?? 0));
+            throw new Error(
+              left === 0
+                ? `"${w.name}" is out of stock. Please remove it from your cart.`
+                : `Only ${left} of "${w.name}" left in stock. Please reduce the quantity.`,
+            );
+          }
+        }
+
         const vOrderRef = doc(collection(db, COLLECTION.VENDOR_ORDERS));
         const vOrderId = vOrderRef.id;
         vendorOrderIds.push(vOrderId);
 
         const vSubtotal = vendorItems.reduce((acc, it) => acc + it.totalPrice, 0);
-        const vCommission = Math.round(vSubtotal * 0.12);
+        const vCommission = Math.round(vSubtotal * vendorDoc.commissionRate);
         const vEarning = vSubtotal - vCommission;
 
         const deliveryRef = doc(collection(db, COLLECTION.DELIVERIES));
         const deliveryId = deliveryRef.id;
         const verificationOtp = String(Math.floor(1000 + Math.random() * 9000));
+
+        // Handover PIN lives in its own document so drivers can never read it before delivery.
+        batch.set(doc(db, 'deliveryOtps', deliveryId), {
+          deliveryId,
+          orderId,
+          customerId: user.uid,
+          otp: verificationOtp,
+          createdAt: serverTimestamp(),
+        });
 
         // Delivery doc
         batch.set(deliveryRef, {
@@ -231,14 +278,14 @@ export const CheckoutPage: React.FC = () => {
           vendorId,
           status: 'pending_assignment',
           pickupAddress: {
-            line1: 'Vendor Logistics Depot',
-            city: selectedAddr.city,
-            state: selectedAddr.state,
-            pincode: selectedAddr.pincode,
+            line1: vendorDoc.address?.line1 ?? '',
+            city: vendorDoc.address?.city ?? '',
+            state: vendorDoc.address?.state ?? '',
+            pincode: vendorDoc.address?.pincode ?? (vendorDoc.address as { postalCode?: string } | undefined)?.postalCode ?? '',
+            label: vendorDoc.storeName,
           },
           deliveryAddress: orderPayload.shippingAddress,
-          verificationOtp,
-          driverEarning: 5000,
+          driverEarning: liveSettings.driverEarningPerDelivery,
           statusHistory: [
             {
               status: 'pending_assignment',
@@ -256,7 +303,7 @@ export const CheckoutPage: React.FC = () => {
           orderId,
           customerId: user.uid,
           vendorId,
-          storeName: 'Merchant Partner',
+          storeName: vendorDoc.storeName,
           items: vendorItems,
           status: 'pending',
           subtotal: vSubtotal,
@@ -275,31 +322,31 @@ export const CheckoutPage: React.FC = () => {
         });
       }
 
-      // Master order doc
-      const initialStatus = paymentMethod === 'cod' ? 'confirmed' : 'pending_payment';
+      // Master order doc. Product prices are GST-inclusive, so GST is the tax portion already inside the subtotal.
+      const includedGst = Math.round(subtotal - subtotal / (1 + liveSettings.defaultGstRate));
       batch.set(masterOrderRef, {
         id: orderId,
         customerId: user.uid,
         orderNumber,
-        status: initialStatus,
+        status: 'confirmed',
         items,
         pricing: {
           subtotal,
           couponDiscount,
           deliveryCharge,
-          gstTotal: Math.round(subtotal * 0.18),
+          gstTotal: includedGst,
           grandTotal,
         },
         shippingAddress: orderPayload.shippingAddress,
-        paymentMethod,
+        paymentMethod: 'cod',
         couponCode: couponCode || null,
         vendorOrderIds,
         notes: orderNotes,
         statusHistory: [
           {
-            status: initialStatus,
+            status: 'confirmed',
             timestamp: new Date().toISOString(),
-            note: paymentMethod === 'cod' ? 'Order confirmed via Cash on Delivery' : 'Order awaiting payment verification',
+            note: 'Order confirmed via Cash on Delivery',
             actorId: user.uid,
           },
         ],
@@ -307,49 +354,62 @@ export const CheckoutPage: React.FC = () => {
         updatedAt: serverTimestamp(),
       });
 
-      await batch.commit();
+      // If the connection drops mid-write Firestore queues the write and never rejects, so stop waiting
+      // after a while instead of spinning forever.
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => resolve('timeout'), 20000);
+      });
+      const outcome = await Promise.race([batch.commit().then(() => 'ok' as const), timeout]);
+      if (timer) clearTimeout(timer);
+
+      if (outcome === 'timeout') {
+        setOrderError(
+          'Your internet connection dropped while placing the order. It may still go through once you are back online — please check "My Orders" before trying again, so you do not order twice.',
+        );
+        return;
+      }
 
       clearCart();
       navigate(`/order-success/${orderId}`, { state: { orderNumber } });
     } catch (err: unknown) {
       console.error('Order creation error:', err);
-      const msg = err instanceof Error ? err.message : 'Failed to complete order. Please try again.';
-      setOrderError(msg);
+      setOrderError(friendlyError(err, 'Failed to complete order. Please try again.'));
     } finally {
       setPlacingOrder(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 lg:pb-8">
       {/* Breadcrumb / Title */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
           <Link to="/cart" className="hover:text-blue-600">Cart</Link>
           <span>/</span>
           <span className="text-gray-900 font-semibold">Secure Checkout</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Checkout</h1>
+        <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Checkout</h1>
       </div>
 
       {orderError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-sm">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{orderError}</span>
+        <div role="alert" className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700 text-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <span className="min-w-0 break-words">{orderError}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 items-start">
         {/* Left Column: Checkout Steps */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-4 sm:space-y-6">
           {/* STEP 1: Delivery Address */}
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
                   1
                 </div>
-                <h2 className="text-lg font-bold text-gray-900">Delivery Address</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Delivery Address</h2>
               </div>
               {!showAddressForm && (
                 <button
@@ -372,14 +432,19 @@ export const CheckoutPage: React.FC = () => {
               <form onSubmit={handleSaveNewAddress} className="mt-4 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    label="Recipient Full Name *"
+                    label="Recipient Full Name"
+                    autoComplete="name"
                     placeholder="e.g. Rahul Sharma"
                     value={newRecipientName}
                     onChange={(e) => setNewRecipientName(e.target.value)}
                     required
                   />
                   <Input
-                    label="Contact Phone Number *"
+                    label="Contact Phone Number"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={13}
                     placeholder="10-digit mobile number"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
@@ -388,7 +453,8 @@ export const CheckoutPage: React.FC = () => {
                 </div>
 
                 <Input
-                  label="Street Address / House No. / Area *"
+                  label="Street Address / House No. / Area"
+                  autoComplete="address-line1"
                   placeholder="Flat 302, Green Valley Apartments, 5th Cross"
                   value={newLine1}
                   onChange={(e) => setNewLine1(e.target.value)}
@@ -404,24 +470,29 @@ export const CheckoutPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input
-                    label="City *"
+                    label="City"
+                    autoComplete="address-level2"
                     placeholder="Mumbai / Bengaluru"
                     value={newCity}
                     onChange={(e) => setNewCity(e.target.value)}
                     required
                   />
                   <Input
-                    label="State *"
+                    label="State"
+                    autoComplete="address-level1"
                     placeholder="Maharashtra / Karnataka"
                     value={newState}
                     onChange={(e) => setNewState(e.target.value)}
                     required
                   />
                   <Input
-                    label="PIN Code *"
+                    label="PIN Code"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={6}
                     placeholder="e.g. 560001"
                     value={newPincode}
-                    onChange={(e) => setNewPincode(e.target.value)}
+                    onChange={(e) => setNewPincode(e.target.value.replace(/\D/g, ''))}
                     required
                   />
                 </div>
@@ -508,7 +579,7 @@ export const CheckoutPage: React.FC = () => {
           </Card>
 
           {/* STEP 2: Payment Method */}
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-2.5 pb-4 border-b border-gray-100 mb-4">
               <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
                 2
@@ -547,30 +618,20 @@ export const CheckoutPage: React.FC = () => {
 
               {/* Online Payment */}
               <label
-                onClick={() => setPaymentMethod('razorpay_card')}
-                className={`p-4 rounded-xl border-2 flex items-start gap-4 cursor-pointer transition-all ${
-                  paymentMethod === 'razorpay_card'
-                    ? 'border-blue-600 bg-blue-50/50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                aria-disabled="true"
+                className="p-4 rounded-xl border-2 border-gray-200 bg-gray-50 flex items-start gap-4 cursor-not-allowed opacity-70"
               >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  checked={paymentMethod === 'razorpay_card'}
-                  onChange={() => setPaymentMethod('razorpay_card')}
-                  className="mt-1 text-blue-600 focus:ring-blue-500"
-                />
+                <input type="radio" name="paymentMethod" disabled className="mt-1" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-blue-600" />
                     <span className="font-bold text-gray-900 text-sm">
                       Online Payment (UPI, Credit/Debit Card, NetBanking)
                     </span>
-                    <Badge variant="default" className="text-[10px]">Instant Confirmation</Badge>
+                    <Badge variant="default" className="text-[10px]">Coming soon</Badge>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Secure 256-bit encrypted checkout via Razorpay Gateway integration.
+                    Online payments are not enabled yet. Please choose Cash on Delivery.
                   </p>
                 </div>
               </label>
@@ -586,30 +647,36 @@ export const CheckoutPage: React.FC = () => {
                 placeholder="e.g. Leave with security guard, call before arriving..."
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3.5 py-2.5 text-sm bg-white text-gray-900 placeholder-gray-400 border border-gray-300 hover:border-gray-400 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none transition-colors"
               />
+              <p className="mt-1 text-[11px] text-gray-400">Shared with the delivery partner. Do not include payment or personal ID details.</p>
             </div>
           </Card>
         </div>
 
         {/* Right Column: Order Confirmation Sidebar */}
         <div className="lg:col-span-4 space-y-4">
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <h3 className="font-bold text-gray-900 text-base pb-3 border-b border-gray-100 mb-4">
               Items in Order ({items.length})
             </h3>
 
             {/* Mini Items List */}
-            <div className="space-y-3 max-h-56 overflow-y-auto pr-1 divide-y divide-gray-50">
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-1 divide-y divide-gray-50">
               {items.map((item) => (
                 <div key={`${item.productId}-${item.variantId || 'base'}`} className="pt-2 flex items-center gap-3">
-                  <img
-                    src={item.imageURL}
-                    alt={item.name}
-                    className="w-12 h-12 object-cover rounded-lg border border-gray-100 flex-shrink-0"
-                  />
+                  {item.imageURL ? (
+                    <img
+                      src={item.imageURL}
+                      alt={item.name}
+                      loading="lazy"
+                      className="w-12 h-12 object-cover rounded-lg border border-gray-100 flex-shrink-0 bg-gray-50"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg border border-gray-100 bg-gray-50 flex-shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-gray-900 truncate">{item.name}</p>
+                    <p className="text-xs font-bold text-gray-900 line-clamp-2 leading-snug">{item.name}</p>
                     <p className="text-[11px] text-gray-500">Qty: {item.quantity}</p>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{formatMoney(item.totalPrice)}</span>
@@ -648,7 +715,7 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {/* Place Order CTA */}
-            <div className="mt-6">
+            <div className="mt-6 hidden lg:block">
               <Button
                 onClick={handlePlaceOrder}
                 disabled={placingOrder || (!selectedAddressId && !showAddressForm)}
@@ -675,6 +742,31 @@ export const CheckoutPage: React.FC = () => {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* Phone: place-order bar pinned to the bottom */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,.08)] px-3 pt-2.5 pb-3 pb-safe flex items-center gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] text-gray-500 leading-none">Total payable</p>
+          <p className="text-lg font-black text-blue-600 leading-tight">{formatMoney(grandTotal)}</p>
+        </div>
+        <button
+          onClick={handlePlaceOrder}
+          disabled={placingOrder || (!selectedAddressId && !showAddressForm)}
+          className="flex-1 h-12 rounded-xl bg-blue-600 active:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
+        >
+          {placingOrder ? (
+            <>
+              <Spinner size="sm" />
+              Placing order...
+            </>
+          ) : (
+            <>
+              Place order
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

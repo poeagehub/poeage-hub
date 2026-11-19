@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@poeage/ui';
-import { Lock, Mail, AlertCircle, Zap, KeyRound } from 'lucide-react';
+import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { friendlyError } from '@poeage/firebase-client';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('customer@poeagehub.com');
-  const [password, setPassword] = useState('customer123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -29,7 +30,7 @@ export const LoginPage: React.FC = () => {
       } else if (code === 'auth/too-many-requests') {
         setErrorMsg('Access temporarily blocked due to too many failed attempts. Try again later.');
       } else {
-        setErrorMsg((err as { message?: string }).message || 'Failed to sign in.');
+        setErrorMsg(friendlyError(err, 'Failed to sign in.'));
       }
     } finally {
       setLoading(false);
@@ -41,12 +42,6 @@ export const LoginPage: React.FC = () => {
     handleLogin(email, password);
   };
 
-  const handleQuickDemoLogin = () => {
-    setEmail('customer@poeagehub.com');
-    setPassword('customer123');
-    handleLogin('customer@poeagehub.com', 'customer123');
-  };
-
   const handleGoogleSignIn = async () => {
     setErrorMsg(null);
     setLoading(true);
@@ -54,14 +49,14 @@ export const LoginPage: React.FC = () => {
       await loginWithGoogleAuth();
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      setErrorMsg((err as { message?: string }).message || 'Google sign-in was cancelled or failed.');
+      setErrorMsg(friendlyError(err, 'Google sign-in was cancelled or failed.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[70vh] sm:min-h-[80vh] flex items-start sm:items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-md w-full shadow-lg border-gray-200">
         <CardHeader className="text-center space-y-2">
           <div className="w-12 h-12 bg-blue-600 rounded-xl text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
@@ -74,32 +69,6 @@ export const LoginPage: React.FC = () => {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Demo Credentials Box */}
-          <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-                Temporary Demo Credentials
-              </span>
-              <span className="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-semibold">
-                Pre-configured
-              </span>
-            </div>
-            <div className="text-xs text-gray-700 font-mono space-y-0.5 bg-white p-2.5 rounded-lg border border-blue-100">
-              <p>Email: <span className="text-blue-700 font-bold">customer@poeagehub.com</span></p>
-              <p>Password: <span className="text-blue-700 font-bold">customer123</span> (or any password)</p>
-            </div>
-            <Button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-              ⚡ Instant 1-Click Demo Customer Login
-            </Button>
-          </div>
-
           {errorMsg && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2.5 text-xs text-red-700">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />

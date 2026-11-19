@@ -16,3 +16,7 @@ storybook-static/
 lib/
 .turbo/
 *.tsbuildinfo
+
+# Firebase service account keys - never commit
+*serviceAccount*.json
+*-firebase-adminsdk-*.json

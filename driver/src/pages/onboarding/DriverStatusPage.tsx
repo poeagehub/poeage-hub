@@ -1,10 +1,15 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useDriverAuth } from '../../context/AuthContext';
 import { Button, Card, CardContent } from '@poeage/ui';
 import { Clock, CheckCircle2, XCircle, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 
 export const DriverStatusPage: React.FC = () => {
   const { driver, status, signOutDriver, refreshDriverState, loading } = useDriverAuth();
+
+  if (status === 'approved' || status === 'active' || status === 'offline') {
+    return <Navigate to="/" replace />;
+  }
 
   const renderStatus = () => {
     switch (status) {
@@ -28,15 +33,6 @@ export const DriverStatusPage: React.FC = () => {
           title: 'Account Suspended',
           color: 'border-red-500/30 bg-red-500/10 text-red-300',
           desc: 'Your delivery driver account has been suspended by the operations desk.',
-        };
-      case 'approved':
-      case 'active':
-      case 'offline':
-        return {
-          icon: <CheckCircle2 className="w-10 h-10 text-green-400" />,
-          title: 'Driver Approved!',
-          color: 'border-green-500/30 bg-green-500/10 text-green-300',
-          desc: 'Your profile is approved. You can now toggle availability and accept delivery runs.',
         };
       default:
         return {
