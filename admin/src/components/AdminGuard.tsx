@@ -15,7 +15,7 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
-        <Spinner size="lg" className="text-blue-400" />
+        <Spinner size="lg" className="text-primary-400" />
         <p className="mt-4 text-sm text-slate-400">Verifying administrative security credentials...</p>
       </div>
     );

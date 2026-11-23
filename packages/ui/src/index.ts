@@ -8,3 +8,7 @@ export * from './components/Badge';
 export * from './components/Spinner';
 export * from './components/ErrorBoundary';
 export { createStableContext } from './stableContext';
+export * from './components/PanelShell';
+export * from './components/panel';
+export * from './components/charts';
+export * from './components/Switch';

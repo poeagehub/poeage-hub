@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { WishlistProvider } from './context/WishlistContext';
 import { MaintenanceGate } from './components/MaintenanceGate';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
@@ -20,11 +21,14 @@ import { CheckoutPage } from './pages/checkout/CheckoutPage';
 import { OrderSuccessPage } from './pages/orders/OrderSuccessPage';
 import { OrderHistoryPage } from './pages/orders/OrderHistoryPage';
 import { OrderTrackingPage } from './pages/orders/OrderTrackingPage';
+import { WishlistPage } from './pages/account/WishlistPage';
+import { StoresPage, StorePage } from './pages/stores/StoresPage';
+import { InfoPage } from './pages/info/InfoPage';
 import { Button } from '@poeage/ui';
 
 const NotFoundPage: React.FC = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
-    <h1 className="text-6xl font-extrabold text-blue-600 mb-2">404</h1>
+    <h1 className="text-6xl font-extrabold text-primary-600 mb-2">404</h1>
     <h2 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h2>
     <p className="text-gray-500 max-w-md mb-6">The page you're looking for doesn't exist or has been moved.</p>
     <Link to="/">
@@ -39,6 +43,7 @@ export default function App() {
     <MaintenanceGate>
     <AuthProvider>
       <CartProvider>
+      <WishlistProvider>
         <BrowserRouter>
           <div className="min-h-screen flex flex-col bg-gray-50">
             <Header />
@@ -93,6 +98,12 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/wishlist" element={<WishlistPage />} />
+                <Route path="/stores" element={<StoresPage />} />
+                <Route path="/store/:id" element={<StorePage />} />
+                {['/support', '/shipping-policy', '/returns', '/about', '/terms', '/privacy'].map((p) => (
+                  <Route key={p} path={p} element={<InfoPage />} />
+                ))}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </main>
@@ -100,6 +111,7 @@ export default function App() {
             <MobileTabBar />
           </div>
         </BrowserRouter>
+      </WishlistProvider>
       </CartProvider>
     </AuthProvider>
     </MaintenanceGate>

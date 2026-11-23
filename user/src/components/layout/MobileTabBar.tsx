@@ -35,7 +35,7 @@ export const MobileTabBar: React.FC = () => {
               end={t.end}
               className={({ isActive }) =>
                 `h-full flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
-                  isActive ? 'text-blue-600' : 'text-gray-500 active:text-blue-600'
+                  isActive ? 'text-primary-600' : 'text-gray-500 active:text-primary-600'
                 }`
               }
             >
@@ -44,7 +44,7 @@ export const MobileTabBar: React.FC = () => {
                   <span className="relative">
                     <t.icon className={`w-[22px] h-[22px] ${isActive ? 'stroke-[2.4]' : ''}`} />
                     {!!t.badge && t.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 bg-primary-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
                         {t.badge > 9 ? '9+' : t.badge}
                       </span>
                     )}

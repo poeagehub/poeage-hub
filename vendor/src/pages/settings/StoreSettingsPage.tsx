@@ -3,7 +3,7 @@ import { useVendorAuth } from '../../context/AuthContext';
 import { updateDocument, setDocument, subscribeToDocument, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Vendor, VendorBankDetails } from '@poeage/types';
-import { Button, Card, Badge, Spinner } from '@poeage/ui';
+import { Button, Card, Badge, Spinner, Switch } from '@poeage/ui';
 import { compressImageToDataUrl } from '../../lib/imageCompress';
 import {
   Store,
@@ -174,7 +174,7 @@ function buildPayload(f: Form, base: Form, vendor: Vendor): Record<string, unkno
 }
 
 const inputCls = (err?: string) =>
-  `w-full px-3 py-2 text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+  `w-full px-3 py-2 text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 ${
     err ? 'border-red-400' : 'border-gray-300 hover:border-gray-400'
   }`;
 
@@ -199,7 +199,7 @@ const Section: React.FC<{ icon: React.ReactNode; title: string; subtitle: string
 }) => (
   <Card className="p-6">
     <div className="flex items-start gap-3 mb-5">
-      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">{icon}</div>
+      <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">{icon}</div>
       <div>
         <h2 className="text-sm font-bold text-gray-900">{title}</h2>
         <p className="text-xs text-gray-500">{subtitle}</p>
@@ -330,7 +330,7 @@ export const StoreSettingsPage: React.FC = () => {
   );
 
   return (
-    <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6 pb-28">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6 pb-28">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Store Settings</h1>
@@ -348,22 +348,21 @@ export const StoreSettingsPage: React.FC = () => {
 
       {/* Store status */}
       <Section icon={<Power className="w-4 h-4" />} title="Store availability" subtitle="Pause your store to stop new orders without losing your listings.">
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 card-modern-hover">
           <div>
-            <p className="text-sm font-bold text-gray-900">{form.isOpen ? 'Store is open' : 'Store is paused'}</p>
-            <p className="text-xs text-gray-500">
-              {form.isOpen ? 'Customers can order your products.' : 'Customers cannot place new orders. Existing orders continue.'}
+            <p className="text-sm font-bold text-slate-900">{form.isOpen ? 'Store is open' : 'Store is paused'}</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {form.isOpen ? 'Customers can view and purchase your products.' : 'Customers cannot place new orders. Existing orders continue normally.'}
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={form.isOpen}
-            onClick={() => set('isOpen', !form.isOpen)}
-            className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${form.isOpen ? 'bg-emerald-500' : 'bg-gray-300'}`}
-          >
-            <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${form.isOpen ? 'left-6' : 'left-1'}`} />
-          </button>
+          <div className="shrink-0 pt-0.5">
+            <Switch
+              checked={form.isOpen}
+              onChange={(checked) => set('isOpen', checked)}
+              tone="teal"
+              size="md"
+            />
+          </div>
         </div>
         {!form.isOpen && (
           <Field label="Reason (optional)" hint="For your own reference.">
@@ -375,7 +374,7 @@ export const StoreSettingsPage: React.FC = () => {
       {/* Profile */}
       <Section icon={<Store className="w-4 h-4" />} title="Store profile" subtitle="How your store appears to customers.">
         <div className="relative">
-          <div className="h-36 rounded-xl bg-gradient-to-r from-emerald-100 to-sky-100 overflow-hidden border border-gray-100">
+          <div className="h-36 rounded-xl bg-gradient-to-r from-teal-100 to-sky-100 overflow-hidden border border-gray-100">
             {form.bannerURL && <img src={form.bannerURL} alt="Store banner" className="w-full h-full object-cover" />}
           </div>
           <div className="absolute right-3 top-3 flex gap-2">
@@ -391,7 +390,7 @@ export const StoreSettingsPage: React.FC = () => {
             )}
           </div>
           <div className="absolute -bottom-8 left-5 flex items-end gap-2">
-            <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center text-2xl font-black text-emerald-700 bg-emerald-50">
+            <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center text-2xl font-black text-teal-700 bg-teal-50">
               {form.logoURL ? <img src={form.logoURL} alt="Logo" className="w-full h-full object-cover" /> : form.storeName[0]?.toUpperCase() || 'S'}
             </div>
             <div className="pb-1 flex gap-1.5">
@@ -492,7 +491,7 @@ export const StoreSettingsPage: React.FC = () => {
             return (
               <div key={d} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <label className="flex items-center gap-2 w-32 text-xs font-bold text-gray-800 capitalize cursor-pointer">
-                  <input type="checkbox" checked={h.open} onChange={(ev) => update({ open: ev.target.checked })} className="accent-emerald-600" />
+                  <input type="checkbox" checked={h.open} onChange={(ev) => update({ open: ev.target.checked })} className="accent-teal-600" />
                   {d}
                 </label>
                 {h.open ? (
@@ -531,35 +530,53 @@ export const StoreSettingsPage: React.FC = () => {
         </div>
       </Section>
 
-      {/* Sticky save bar */}
-      <div className="fixed bottom-0 right-0 left-64 z-30 bg-white/95 backdrop-blur border-t border-gray-200 px-6 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div className="text-xs min-w-0">
-            {submitError ? (
-              <span className="text-red-600 font-medium flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {submitError}
-              </span>
-            ) : saved ? (
-              <span className="text-emerald-600 font-semibold flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> Saved. Your store is updated.
-              </span>
-            ) : dirty ? (
-              <span className="text-amber-600 font-semibold">You have unsaved changes</span>
-            ) : (
-              <span className="text-gray-400">All changes saved</span>
-            )}
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="secondary" size="sm" onClick={discard} disabled={!dirty || saving}>
-              Discard
-            </Button>
-            <Button size="sm" onClick={save} disabled={!dirty || saving} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold min-w-[110px]">
-              {saving ? <Spinner size="sm" /> : 'Save changes'}
-            </Button>
+      {/* Modern floating save dock */}
+      {(dirty || saving || submitError || saved) && (
+        <div className="fixed bottom-4 sm:bottom-6 inset-x-0 lg:left-64 z-50 flex justify-center pointer-events-none px-4 pb-safe animate-page-enter">
+          <div className="pointer-events-auto w-full max-w-xl rounded-2xl bg-white/95 text-slate-900 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.18),0_4px_12px_-2px_rgba(15,23,42,0.08)] border border-slate-200/90 backdrop-blur-xl p-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-4">
+            <div className="text-xs sm:text-sm min-w-0 flex items-center gap-2.5">
+              {submitError ? (
+                <span className="text-rose-600 font-semibold flex items-center gap-2 truncate">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span className="truncate">{submitError}</span>
+                </span>
+              ) : saved ? (
+                <span className="text-teal-600 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-teal-500" />
+                  <span>Saved. Your store is updated.</span>
+                </span>
+              ) : dirty ? (
+                <span className="text-amber-600 font-semibold flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse-live shrink-0" />
+                  <span>You have unsaved changes</span>
+                </span>
+              ) : (
+                <span className="text-slate-400">All changes saved</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={discard}
+                disabled={!dirty || saving}
+                className="text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 active:scale-95 transition-all"
+              >
+                Discard
+              </Button>
+              <Button
+                size="sm"
+                onClick={save}
+                disabled={!dirty || saving}
+                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-teal-600/20 active:scale-95 transition-all min-w-[110px]"
+              >
+                {saving ? <Spinner size="sm" /> : 'Save changes'}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

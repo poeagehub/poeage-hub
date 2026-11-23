@@ -72,3 +72,12 @@ export {
   subscribePlatformSettings,
   type PlatformSettingsData,
 } from './platformSettings.ts';
+
+export {
+  requestPayout,
+  cancelPayoutRequest,
+  processPayoutRequest,
+  payoutLockId,
+  type RequestPayoutInput,
+  type ProcessPayoutInput,
+} from './payouts.ts';

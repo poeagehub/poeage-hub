@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { UserProfile, Order, Address, AuditLog, AccountStatus } from '@poeage/types';
 import { formatMoney, formatDate, formatDateTime, formatRelativeTime } from '@poeage/utils';
 import { Button, Badge, Spinner } from '@poeage/ui';
@@ -49,7 +50,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
   onCustomerUpdated,
   onRequestStatusToggle,
 }) => {
-  if (!isOpen || !customer) return null;
+  if (!isOpen || !customer || typeof document === 'undefined') return null;
 
   const { user: adminUser } = useAdminAuth();
 
@@ -123,7 +124,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
           phone,
           status,
         },
-        { uid: adminUser?.uid || 'admin', email: adminUser?.email || 'admin@poeagehub.com' }
+        { uid: adminUser?.uid || 'admin', email: adminUser?.email || 'admin123@gmail.com' }
       );
 
       const updatedCustomer: UserProfile = {
@@ -150,7 +151,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
     try {
       await addCustomerAdminNote(customer.uid, newNote.trim(), {
         uid: adminUser?.uid || 'admin',
-        email: adminUser?.email || 'admin@poeagehub.com',
+        email: adminUser?.email || 'admin123@gmail.com',
       });
       setNewNote('');
       // Reload audit logs
@@ -168,13 +169,24 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
   const totalSpentPaise = customer.metadata?.totalSpent || 0;
   const avgOrderValue = totalOrdersCount > 0 ? Math.round(totalSpentPaise / totalOrdersCount) : 0;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="flex min-h-full items-center justify-center p-3 sm:p-6 text-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[calc(100vh-3.5rem)] my-auto text-left animate-in fade-in zoom-in-95 duration-150"
+        >
         {/* Modal Top Header */}
         <div className="p-6 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl flex items-center justify-center shadow-lg border border-white/20 shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary-600 to-indigo-500 text-white font-black text-xl flex items-center justify-center shadow-lg border border-white/20 shrink-0">
               {customer.displayName?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || 'C'}
             </div>
             <div>
@@ -207,7 +219,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
 
               <div className="flex items-center gap-4 text-xs text-slate-300 mt-1 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-blue-400" />
+                  <Mail className="w-3.5 h-3.5 text-primary-400" />
                   {customer.email}
                 </span>
                 {customer.phone && (
@@ -265,7 +277,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
           </div>
           <div className="p-3 bg-white rounded-xl border border-gray-200/80 shadow-xs">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Orders</p>
-            <p className="text-lg font-black text-blue-600 mt-0.5">{totalOrdersCount}</p>
+            <p className="text-lg font-black text-primary-600 mt-0.5">{totalOrdersCount}</p>
           </div>
           <div className="p-3 bg-white rounded-xl border border-gray-200/80 shadow-xs">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Avg Order Value</p>
@@ -283,7 +295,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
             onClick={() => setActiveTab('overview')}
             className={`py-3.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'overview'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-600 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
@@ -294,7 +306,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
             onClick={() => setActiveTab('orders')}
             className={`py-3.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'orders'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-600 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
@@ -308,7 +320,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
             onClick={() => setActiveTab('addresses')}
             className={`py-3.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'addresses'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-600 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
@@ -319,7 +331,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
             onClick={() => setActiveTab('audit')}
             className={`py-3.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'audit'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-600 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
@@ -343,7 +355,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="border border-gray-200 rounded-xl p-5 space-y-4 shadow-xs">
                   <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <User className="w-4 h-4 text-blue-600" />
+                    <User className="w-4 h-4 text-primary-600" />
                     Edit Customer Information
                   </h3>
 
@@ -354,7 +366,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
                       />
                     </div>
 
@@ -364,7 +376,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
                       />
                     </div>
                   </div>
@@ -385,7 +397,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                       <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value as AccountStatus)}
-                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                       >
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
@@ -475,7 +487,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                                   ? 'bg-green-100 text-green-700'
                                   : o.status === 'cancelled'
                                   ? 'bg-red-100 text-red-700'
-                                  : 'bg-blue-100 text-blue-700'
+                                  : 'bg-primary-100 text-primary-700'
                               }`}
                             >
                               {o.status.replace(/_/g, ' ')}
@@ -526,17 +538,17 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                       key={addr.id}
                       className={`p-4 rounded-xl border relative space-y-2 ${
                         addr.isDefault || addr.id === customer.defaultAddressId
-                          ? 'border-blue-400 bg-blue-50/30'
+                          ? 'border-primary-400 bg-primary-50/30'
                           : 'border-gray-200 bg-white'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                          <MapPin className="w-3.5 h-3.5 text-primary-600" />
                           {addr.label || 'Home'}
                         </span>
                         {(addr.isDefault || addr.id === customer.defaultAddressId) && (
-                          <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full">
+                          <span className="px-2 py-0.5 bg-primary-600 text-white text-[10px] font-bold rounded-full">
                             Default Address
                           </span>
                         )}
@@ -568,7 +580,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
               {/* Note input box */}
               <form onSubmit={handleAddAdminNote} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                  <MessageSquare className="w-3.5 h-3.5 text-primary-600" />
                   Append Internal Compliance Note / Flag
                 </label>
                 <div className="flex gap-2">
@@ -577,7 +589,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="e.g. Identity verified via phone, customer reported delayed shipment..."
-                    className="flex-1 text-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="flex-1 text-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                   />
                   <Button type="submit" size="sm" variant="primary" isLoading={isSubmittingNote} disabled={!newNote.trim()}>
                     Log Note
@@ -627,5 +639,7 @@ export const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>,
+  document.body,
+);
 };

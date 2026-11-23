@@ -15,10 +15,10 @@ export const APP_CONFIG = {
   timezone: 'Asia/Kolkata',
 
   urls: {
-    user: import.meta.env['VITE_USER_APP_URL'] as string ?? 'http://localhost:5173',
-    admin: import.meta.env['VITE_ADMIN_APP_URL'] as string ?? 'http://localhost:5174',
-    vendor: import.meta.env['VITE_VENDOR_APP_URL'] as string ?? 'http://localhost:5175',
-    driver: import.meta.env['VITE_DRIVER_APP_URL'] as string ?? 'http://localhost:5176',
+    user: import.meta.env['VITE_USER_APP_URL'] as string ?? 'http://localhost:5180',
+    admin: import.meta.env['VITE_ADMIN_APP_URL'] as string ?? 'http://localhost:5181',
+    vendor: import.meta.env['VITE_VENDOR_APP_URL'] as string ?? 'http://localhost:5182',
+    driver: import.meta.env['VITE_DRIVER_APP_URL'] as string ?? 'http://localhost:5183',
   },
 
   firebase: {
@@ -81,6 +81,8 @@ export const COLLECTION = {
   INVENTORY_LOGS: 'inventoryLogs',
   VENDORS: 'vendors',
   VENDOR_PRIVATE: 'vendorPrivate',
+  PAYOUT_REQUESTS: 'payoutRequests',
+  PAYOUT_LOCKS: 'payoutLocks',
   VENDOR_APPLICATIONS: 'vendorApplications',
   DRIVERS: 'drivers',
   DRIVER_APPLICATIONS: 'driverApplications',

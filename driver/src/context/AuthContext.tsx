@@ -180,17 +180,22 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const signOutDriver = async () => {
     setError(null);
-    try {
-      if (user && isOnline) {
+    // Best-effort: going offline must never block sign-out (e.g. flaky network).
+    if (user && isOnline) {
+      try {
         await updateDocument(COLLECTION.DRIVERS, user.uid, { isOnline: false, status: 'offline' });
+      } catch (err: unknown) {
+        console.error('[DriverAuth] Could not mark driver offline:', err);
       }
+    }
+    try {
       await logout();
-      setUser(null);
-      setDriver(null);
-      setIsOnline(false);
     } catch (err: unknown) {
       console.error('[DriverAuth] Sign out error:', err);
     }
+    setUser(null);
+    setDriver(null);
+    setIsOnline(false);
   };
 
   const refreshDriverState = async () => {

@@ -56,7 +56,7 @@ export const VendorStatusPage: React.FC = () => {
 
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-white">{statusInfo.title}</h2>
-            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest mt-1">
+            <p className="text-xs font-semibold text-teal-400 uppercase tracking-widest mt-1">
               Store: {vendor?.storeName || 'Merchant'}
             </p>
           </div>

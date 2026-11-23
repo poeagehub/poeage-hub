@@ -15,10 +15,10 @@ The platform coordinates **four role-tailored frontend applications** powered by
 ```mermaid
 graph TD
     subgraph Frontend Portals [Portals on Independent Ports]
-        UserApp["Customer Storefront (:5173)<br/>Shopping, Cart, Checkout, Order Tracking"]
-        VendorApp["Vendor Portal (:5175)<br/>Product Studio, Packaging, Settlements"]
-        DriverApp["Driver Fleet Portal (:5176)<br/>Live Dispatches, OTP Handover, Earnings"]
-        AdminApp["Admin Control Center (:5174)<br/>KYC Approvals, Dispatch Queue, Finance"]
+        UserApp["Customer Storefront (:5180)<br/>Shopping, Cart, Checkout, Order Tracking"]
+        VendorApp["Vendor Portal (:5182)<br/>Product Studio, Packaging, Settlements"]
+        DriverApp["Driver Fleet Portal (:5183)<br/>Live Dispatches, OTP Handover, Earnings"]
+        AdminApp["Admin Control Center (:5181)<br/>KYC Approvals, Dispatch Queue, Finance"]
     end
 
     subgraph SharedMonorepo [Shared Monorepo Packages]

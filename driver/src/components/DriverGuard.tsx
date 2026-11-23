@@ -7,6 +7,14 @@ interface DriverGuardProps {
   children: React.ReactNode;
 }
 
+/** For onboarding/status screens: only requires a signed-in user, so signing out sends you to /login. */
+export const RequireSignedIn: React.FC<DriverGuardProps> = ({ children }) => {
+  const { user, loading } = useDriverAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
 export const DriverGuard: React.FC<DriverGuardProps> = ({ children }) => {
   const { user, status, loading } = useDriverAuth();
   const location = useLocation();
@@ -14,7 +22,7 @@ export const DriverGuard: React.FC<DriverGuardProps> = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <Spinner size="lg" className="text-amber-500" />
+        <Spinner size="lg" className="text-accent-500" />
         <p className="mt-4 text-sm text-slate-400">Loading driver credentials...</p>
       </div>
     );

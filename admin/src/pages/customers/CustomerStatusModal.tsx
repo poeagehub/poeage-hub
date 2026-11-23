@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { UserProfile, AccountStatus } from '@poeage/types';
 import { Button } from '@poeage/ui';
 import { AlertTriangle, ShieldCheck, ShieldAlert, X } from 'lucide-react';
@@ -18,7 +19,7 @@ export const CustomerStatusModal: React.FC<CustomerStatusModalProps> = ({
   onConfirm,
   isSubmitting,
 }) => {
-  if (!isOpen || !customer) return null;
+  if (!isOpen || !customer || typeof document === 'undefined') return null;
 
   const isCurrentlyActive = customer.status === 'active';
   const targetStatus: AccountStatus = isCurrentlyActive ? 'suspended' : 'active';
@@ -30,9 +31,20 @@ export const CustomerStatusModal: React.FC<CustomerStatusModalProps> = ({
     setReason('');
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden text-left my-auto animate-in fade-in zoom-in-95 duration-150"
+        >
         {/* Header */}
         <div
           className={`p-5 flex items-center justify-between border-b ${
@@ -119,7 +131,7 @@ export const CustomerStatusModal: React.FC<CustomerStatusModalProps> = ({
                   : 'e.g. Identity verified by support team, dispute resolved...'
               }
               rows={3}
-              className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none"
             />
           </div>
 
@@ -139,5 +151,7 @@ export const CustomerStatusModal: React.FC<CustomerStatusModalProps> = ({
         </form>
       </div>
     </div>
-  );
+  </div>,
+  document.body,
+);
 };

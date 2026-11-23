@@ -126,7 +126,7 @@ export const AdminCustomersPage: React.FC = () => {
     try {
       await updateCustomerStatus(statusTargetCustomer.uid, targetStatus, reason, {
         uid: adminUser?.uid || 'admin',
-        email: adminUser?.email || 'admin@poeagehub.com',
+        email: adminUser?.email || 'admin123@gmail.com',
       });
 
       // Update local state
@@ -168,7 +168,7 @@ export const AdminCustomersPage: React.FC = () => {
     try {
       await createCustomer(data, {
         uid: adminUser?.uid || 'admin',
-        email: adminUser?.email || 'admin@poeagehub.com',
+        email: adminUser?.email || 'admin123@gmail.com',
       });
       showToast(`Customer account for ${data.displayName} created successfully!`, 'success');
       handleManualRefresh();
@@ -229,7 +229,7 @@ export const AdminCustomersPage: React.FC = () => {
       for (const u of demoUsers) {
         await createCustomer(u, {
           uid: adminUser?.uid || 'admin',
-          email: adminUser?.email || 'admin@poeagehub.com',
+          email: adminUser?.email || 'admin123@gmail.com',
         });
       }
 
@@ -316,7 +316,7 @@ export const AdminCustomersPage: React.FC = () => {
   }, [customers]);
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Toast Feedback */}
       {toast && (
         <div
@@ -401,7 +401,7 @@ export const AdminCustomersPage: React.FC = () => {
         <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-xs">
           <div className="flex items-center justify-between text-gray-500 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Total Customers</span>
-            <Users className="w-4 h-4 text-blue-600" />
+            <Users className="w-4 h-4 text-primary-600" />
           </div>
           <p className="text-2xl font-black text-gray-900">{metrics.total}</p>
           <span className="text-[10px] text-gray-400 mt-1 block">Registered in platform</span>
@@ -457,7 +457,7 @@ export const AdminCustomersPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, email, phone number, or UID..."
-              className="w-full text-xs pl-10 pr-9 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="w-full text-xs pl-10 pr-9 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
             />
             {searchQuery && (
               <button
@@ -475,7 +475,7 @@ export const AdminCustomersPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-700"
+              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white font-medium text-gray-700"
             >
               <option value="all">All Statuses</option>
               <option value="active">Active Only</option>
@@ -487,7 +487,7 @@ export const AdminCustomersPage: React.FC = () => {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-700"
+              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white font-medium text-gray-700"
             >
               <option value="all">All Roles</option>
               <option value="customer">Customer</option>
@@ -500,7 +500,7 @@ export const AdminCustomersPage: React.FC = () => {
             <select
               value={spendingFilter}
               onChange={(e) => setSpendingFilter(e.target.value)}
-              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-700"
+              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white font-medium text-gray-700"
             >
               <option value="all">All Spending Tiers</option>
               <option value="high_value">VIP Spenders (≥ ₹10K)</option>
@@ -512,7 +512,7 @@ export const AdminCustomersPage: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-700"
+              className="text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white font-medium text-gray-700"
             >
               <option value="newest">Newest Joined</option>
               <option value="oldest">Oldest Joined</option>
@@ -538,7 +538,7 @@ export const AdminCustomersPage: React.FC = () => {
                 setSpendingFilter('all');
                 setSearchQuery('');
               }}
-              className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+              className="text-primary-600 hover:text-primary-800 font-semibold flex items-center gap-1"
             >
               <X className="w-3 h-3" />
               Reset Filters
@@ -556,12 +556,12 @@ export const AdminCustomersPage: React.FC = () => {
       ) : customers.length === 0 ? (
         /* Empty Database State with Seed Button */
         <Card className="p-12 text-center max-w-lg mx-auto shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mx-auto mb-4">
             <Users className="w-7 h-7" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-1">No Customers Registered Yet</h3>
           <p className="text-xs text-gray-500 max-w-sm mx-auto mb-6 leading-relaxed">
-            The live Firestore <code className="bg-gray-100 px-1 py-0.5 rounded text-blue-700 font-mono">users</code>{' '}
+            The live Firestore <code className="bg-gray-100 px-1 py-0.5 rounded text-primary-700 font-mono">users</code>{' '}
             collection has no records yet. When users sign up on the consumer store, they will automatically appear here.
           </p>
           <div className="flex items-center justify-center gap-3">
@@ -630,7 +630,7 @@ export const AdminCustomersPage: React.FC = () => {
                     cust.displayName?.[0]?.toUpperCase() || cust.email?.[0]?.toUpperCase() || 'C';
 
                   return (
-                    <tr key={cust.uid} className="hover:bg-blue-50/30 transition-colors group">
+                    <tr key={cust.uid} className="hover:bg-primary-50/30 transition-colors group">
                       {/* Customer Profile Column */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -638,7 +638,7 @@ export const AdminCustomersPage: React.FC = () => {
                             {initials}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            <p className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
                               {cust.displayName || 'Customer'}
                             </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -715,7 +715,7 @@ export const AdminCustomersPage: React.FC = () => {
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
                             (cust.metadata?.totalOrders || 0) > 0
-                              ? 'bg-blue-50 text-blue-700'
+                              ? 'bg-primary-50 text-primary-700'
                               : 'bg-gray-100 text-gray-400'
                           }`}
                         >
@@ -739,7 +739,7 @@ export const AdminCustomersPage: React.FC = () => {
                           <button
                             onClick={() => setSelectedCustomer(cust)}
                             title="View Full Profile Dossier"
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                           >
                             <Eye className="w-4 h-4" />
                           </button>

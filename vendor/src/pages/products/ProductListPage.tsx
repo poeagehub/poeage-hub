@@ -54,7 +54,7 @@ export const ProductListPage: React.FC = () => {
         </div>
 
         <Link to="/products/new">
-          <Button className="bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 shadow-sm">
+          <Button className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-600 text-white font-bold flex items-center gap-2 shadow-md shadow-teal-900/10 active:scale-95 transition-all">
             <Plus className="w-4 h-4" />
             Add New Product
           </Button>
@@ -74,7 +74,7 @@ export const ProductListPage: React.FC = () => {
               placeholder="Search by product title or tag..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
             />
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
           </div>
@@ -87,7 +87,7 @@ export const ProductListPage: React.FC = () => {
       {/* Product Table */}
       {loading ? (
         <div className="py-20 text-center">
-          <Spinner size="lg" className="text-emerald-500 mx-auto" />
+          <Spinner size="lg" className="text-teal-500 mx-auto" />
           <p className="text-xs text-gray-400 mt-2">Loading products...</p>
         </div>
       ) : filteredProducts.length === 0 ? (
@@ -96,7 +96,7 @@ export const ProductListPage: React.FC = () => {
           <h4 className="font-bold text-gray-700">No products found</h4>
           <p className="text-xs text-gray-400 mt-1 mb-4">Start selling by adding your first product listing.</p>
           <Link to="/products/new">
-            <Button size="sm" className="bg-emerald-600 text-white">
+            <Button size="sm" className="bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-sm transition-all">
               Create Product Listing
             </Button>
           </Link>
@@ -175,7 +175,7 @@ export const ProductListPage: React.FC = () => {
                       <button
                         title="Edit Product"
                         onClick={() => setEditing(p)}
-                        className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                       >
                         <Edit className="w-4 h-4" />
                       </button>

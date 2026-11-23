@@ -67,3 +67,8 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ---------- Shared utilities ---------- */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

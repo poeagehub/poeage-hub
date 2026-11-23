@@ -12,14 +12,14 @@ import {
 import { COLLECTION } from '@poeage/config';
 import type { Delivery, DeliveryStatus, VendorOrder } from '@poeage/types';
 import { formatMoney } from '@poeage/utils';
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Spinner } from '@poeage/ui';
+import { Link } from 'react-router-dom';
+import { ActionButton, Notice, StatTile, RadarEmpty } from '../components/ui';
 import {
   MapPin,
   Navigation,
   CheckCircle,
   Phone,
   ShieldCheck,
-  AlertCircle,
   Clock,
   ArrowRight,
   TrendingUp,
@@ -30,6 +30,7 @@ import {
   Wallet,
   PackageCheck,
   Package,
+  Star,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -290,319 +291,319 @@ export const DashboardPage: React.FC = () => {
     status === 'delivered' ? 4 : ['out_for_delivery', 'in_transit'].includes(status) ? 3 : status === 'picked_up' ? 2 : 1;
   const STEPS = ['Accepted', 'Picked up', 'On the way', 'Delivered'];
 
+  // ----- derived numbers for the summary tiles -----
+  const toMs = (t: any): number => (t?.toMillis ? t.toMillis() : t?.seconds ? t.seconds * 1000 : t instanceof Date ? t.getTime() : 0);
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const doneMs = (d: Delivery) => toMs(d.deliveredAt) || toMs(d.updatedAt);
+  const tripsToday = completedTrips.filter((d) => doneMs(d) >= dayStart.getTime());
+  const earnedToday = tripsToday.reduce((s, d) => s + (d.driverEarning || 0), 0);
+  const recentTrips = [...completedTrips].sort((a, b) => doneMs(b) - doneMs(a)).slice(0, 4);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const first = (driver?.displayName || '').trim().split(/\s+/)[0] || 'Partner';
+  const timeOf = (d: Delivery) => {
+    const ms = doneMs(d);
+    return ms ? new Date(ms).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  };
+
+  // Pinned action area: floats above the phone tab bar, sits inline on desktop.
+  const Sticky: React.FC<{ children: React.ReactNode; from?: string }> = ({ children, from = 'from-[#0d1424]' }) => (
+    <div className={`sticky bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-5 px-5 pt-5 pb-1 bg-gradient-to-t ${from} from-60% to-transparent lg:static lg:mx-0 lg:px-0 lg:pt-1 lg:pb-0 lg:bg-none`}>
+      {children}
+    </div>
+  );
+
+  const routeBlock = (kind: 'pickup' | 'drop') => {
+    const isPickup = kind === 'pickup';
+    const a = isPickup ? activeJob?.pickupAddress : activeJob?.deliveryAddress;
+    const link = mapsLink(a as any);
+    return (
+      <div className="relative pl-9 min-[380px]:pl-10">
+        <span className={`absolute left-0 top-1 w-7 h-7 rounded-full flex items-center justify-center ${isPickup ? 'bg-accent-500 text-white' : 'bg-emerald-400 text-slate-950'}`}>
+          {isPickup ? <Store className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
+        </span>
+        <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-3.5 min-[380px]:p-4">
+          <p className={`text-[10px] font-extrabold uppercase tracking-[0.14em] ${isPickup ? 'text-accent-300' : 'text-emerald-300'}`}>{isPickup ? 'Pickup · Seller' : 'Drop-off · Customer'}</p>
+          <p className="text-[15px] font-extrabold text-white mt-1 leading-snug">
+            {isPickup ? (activeJob?.pickupAddress?.label || 'Pickup store') : (activeJob?.deliveryAddress?.recipientName || 'Customer')}
+          </p>
+          <p className="text-[13px] text-slate-400 mt-1 leading-relaxed">
+            {isPickup
+              ? [a?.line1, a?.city, a?.state].filter(Boolean).join(', ')
+              : [a?.line1, (a as any)?.landmark ? `Landmark: ${(a as any).landmark}` : '', [a?.city, a?.state].filter(Boolean).join(', ') + ((a as any)?.pincode ? ` – ${(a as any).pincode}` : '')].filter(Boolean).join(' · ')}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {link && (
+              <a href={link} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-xs font-extrabold border transition active:scale-95 ${isPickup ? 'bg-accent-400/10 text-accent-200 border-accent-400/30 hover:bg-accent-400/20' : 'bg-white/5 text-slate-100 border-white/15 hover:bg-white/10'}`}>
+                <Navigation className="w-3.5 h-3.5" /> Navigate
+              </a>
+            )}
+            {!isPickup && (a as any)?.phone && (
+              <a href={`tel:${(a as any).phone}`} className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-xs font-extrabold border bg-emerald-400/10 text-emerald-200 border-emerald-400/30 hover:bg-emerald-400/20 transition active:scale-95">
+                <Phone className="w-3.5 h-3.5" /> Call customer
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="px-4 pt-4 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] space-y-4 max-w-xl mx-auto">
-      {/* Availability */}
+    <div className="px-3 min-[380px]:px-4 sm:px-6 lg:px-10 pt-4 lg:pt-10 max-w-[1280px] mx-auto space-y-4 lg:space-y-7">
+      {/* Greeting (desktop; phones greet in the top bar) */}
+      <div className="hidden lg:flex items-end justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-400">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <h1 className="text-3xl font-black tracking-tight text-white mt-1">{greeting}, {first}</h1>
+        </div>
+        <ActionButton tone="outline" size="sm" onClick={fetchDeliveries} aria-label="Refresh jobs">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </ActionButton>
+      </div>
+
+      {/* Availability banner */}
       {!isOnline ? (
-        <div className="bg-amber-950/50 border border-amber-800/70 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center flex-shrink-0">
-            <Truck className="w-5 h-5" />
+        <div className="relative overflow-hidden rounded-3xl border border-accent-400/25 bg-gradient-to-br from-accent-400/15 via-accent-400/5 to-transparent p-4 min-[380px]:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <span className="w-12 h-12 rounded-2xl bg-accent-400/15 text-accent-300 flex items-center justify-center shrink-0 max-[299px]:hidden"><Truck className="w-6 h-6" /></span>
+            <div className="min-w-0">
+              <p className="font-extrabold text-white leading-tight">You're offline</p>
+              <p className="text-sm text-slate-400 mt-0.5">Go online to see and accept delivery jobs near you.</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-amber-300 leading-tight">You are offline</p>
-            <p className="text-xs text-slate-400 mt-0.5">Go online to see and accept delivery jobs.</p>
-          </div>
-          <Button onClick={toggleAvailability} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold h-10 px-4 text-sm flex-shrink-0">
-            Go online
-          </Button>
+          <ActionButton onClick={toggleAvailability} className="sm:w-auto w-full">Go online</ActionButton>
         </div>
       ) : (
-        <div className="bg-green-950/40 border border-green-800/50 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-green-300 font-semibold text-sm min-w-0">
-            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.07] px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </span>
-            <span className="truncate">Online · ready for jobs</span>
+            <p className="text-sm font-bold text-emerald-200 truncate">Online · ready for jobs</p>
           </div>
-          <button
-            onClick={fetchDeliveries}
-            aria-label="Refresh jobs"
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold text-green-300 bg-green-900/30 active:bg-green-900/60 flex-shrink-0"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+          <button onClick={fetchDeliveries} aria-label="Refresh jobs" className="lg:hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-emerald-200 bg-emerald-400/10 active:bg-emerald-400/20">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-3.5">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-            <Wallet className="w-3.5 h-3.5 text-amber-400" /> Earnings
+      {/* Phone: earnings hero */}
+      <section className="lg:hidden relative overflow-hidden rounded-[1.75rem] border border-accent-400/25 bg-gradient-to-br from-accent-500/30 via-accent-600/10 to-transparent p-4 min-[380px]:p-5">
+        <div className="absolute -top-12 -right-8 w-40 h-40 rounded-full bg-accent-400/25 blur-3xl pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-accent-200">Earned today</p>
+            <p className="mt-1.5 text-[clamp(2rem,11vw,2.75rem)] leading-none font-black tracking-tight text-white tabular-nums truncate">{formatMoney(earnedToday)}</p>
+            <p className="mt-2 text-xs text-slate-300">{tripsToday.length} {tripsToday.length === 1 ? 'trip' : 'trips'} completed today</p>
           </div>
-          <p className="text-2xl font-black text-amber-400 mt-1 leading-none">{formatMoney(todayEarningsPaise)}</p>
-          <p className="text-[11px] text-slate-500 mt-1.5">{completedTrips.length} {completedTrips.length === 1 ? 'trip' : 'trips'} completed</p>
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-3.5">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-            <PackageCheck className="w-3.5 h-3.5 text-emerald-400" /> Deliveries
-          </div>
-          <p className="text-2xl font-black text-emerald-400 mt-1 leading-none">
-            {(driver?.metadata?.totalDeliveries || 0) + completedTrips.length}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-1.5">Verified partner</p>
+        <div className="relative mt-4 grid grid-cols-3 max-[299px]:grid-cols-1 divide-x max-[299px]:divide-x-0 max-[299px]:divide-y divide-white/10 rounded-2xl bg-black/25 border border-white/10 text-center">
+          {[
+            { l: 'Total', v: formatMoney(todayEarningsPaise) },
+            { l: 'Deliveries', v: String((driver?.metadata?.totalDeliveries || 0) + completedTrips.length) },
+            { l: 'Rating', v: (driver?.metadata?.totalRatings ?? 0) > 0 ? String(driver?.metadata?.averageRating?.toFixed(1)) : '–' },
+          ].map((c) => (
+            <div key={c.l} className="min-w-0 px-1.5 py-2.5">
+              <p className="text-[13px] min-[380px]:text-sm font-black text-white tabular-nums truncate">{c.v}</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-0.5">{c.l}</p>
+            </div>
+          ))}
         </div>
+      </section>
+
+      {/* Desktop: stat tiles */}
+      <div className="hidden lg:grid grid-cols-4 gap-4">
+        <StatTile icon={<Wallet className="w-4 h-4" />} label="Earned today" value={formatMoney(earnedToday)} sub={`${tripsToday.length} ${tripsToday.length === 1 ? 'trip' : 'trips'} today`} tone="amber" />
+        <StatTile icon={<TrendingUp className="w-4 h-4" />} label="Total earned" value={formatMoney(todayEarningsPaise)} sub="All completed trips" tone="green" />
+        <StatTile icon={<PackageCheck className="w-4 h-4" />} label="Deliveries" value={(driver?.metadata?.totalDeliveries || 0) + completedTrips.length} sub="Verified partner" tone="sky" />
+        <StatTile icon={<Star className="w-4 h-4" />} label="Rating" value={(driver?.metadata?.totalRatings ?? 0) > 0 ? driver?.metadata?.averageRating?.toFixed(1) : '–'} sub={(driver?.metadata?.totalRatings ?? 0) > 0 ? `${driver?.metadata?.totalRatings} ratings` : 'No ratings yet'} tone="violet" />
       </div>
 
-      {successNotice && (
-        <div role="status" className="p-3.5 bg-emerald-950/80 border border-emerald-600/70 rounded-2xl text-emerald-200 text-sm flex items-center gap-2.5 animate-[slideUp_.25s_ease-out]">
-          <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-          <span className="font-semibold">{successNotice}</span>
-        </div>
-      )}
+      {successNotice && <Notice tone="success" className="animate-[slideUp_.25s_ease-out]"><span className="font-bold">{successNotice}</span></Notice>}
 
-      {/* Active job */}
-      {activeJob ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 shadow-xl">
-          <div className="px-4 pt-4 pb-3 bg-slate-800/50 border-b border-slate-700/50 space-y-3 rounded-t-3xl">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-mono font-bold text-slate-400">JOB #{activeJob.id.slice(0, 8).toUpperCase()}</span>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 capitalize whitespace-nowrap">
-                {activeJob.status.replace(/_/g, ' ')}
-              </span>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-xs text-slate-400">You earn for this trip</span>
-              <span className="text-2xl font-black text-amber-400 leading-none">{formatMoney(activeJob.driverEarning || 0)}</span>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem] gap-5 lg:gap-7 items-start">
+        <div className="space-y-5 min-w-0">
+          {activeJob ? (
+            <section className="d-card-solid shadow-2xl shadow-black/40">
+              {/* header */}
+              <div className="rounded-t-3xl px-4 min-[380px]:px-5 pt-5 pb-5 bg-gradient-to-br from-accent-400/[0.12] via-white/[0.02] to-transparent border-b border-white/[0.06] space-y-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] font-mono font-bold text-slate-400">JOB #{activeJob.id.slice(0, 8).toUpperCase()}</span>
+                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-sky-400/15 text-sky-200 border border-sky-400/30 capitalize whitespace-nowrap">
+                    {activeJob.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400">You earn for this trip</p>
+                    <p className="text-[clamp(2rem,11vw,2.5rem)] font-black text-accent-300 leading-none mt-1.5 tabular-nums">{formatMoney(activeJob.driverEarning || 0)}</p>
+                  </div>
+                </div>
 
-            {/* progress */}
-            <ol className="flex items-center" aria-label="Delivery progress">
-              {STEPS.map((label, i) => {
-                const n = i + 1;
-                const cur = stepOf(activeJob.status);
-                const done = cur > n;
-                const now = cur === n;
-                return (
-                  <li key={label} className="flex-1 flex flex-col items-center relative">
-                    {i > 0 && (
-                      <span className={`absolute top-[11px] right-1/2 w-full h-0.5 ${cur >= n ? 'bg-amber-500' : 'bg-slate-700'}`} />
-                    )}
-                    <span
-                      className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-                        done ? 'bg-amber-500 text-slate-950' : now ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-500/25' : 'bg-slate-800 text-slate-500 border border-slate-700'
-                      }`}
-                    >
-                      {done ? '\u2713' : n}
-                    </span>
-                    <span className={`mt-1.5 text-[10px] font-semibold ${cur >= n ? 'text-slate-200' : 'text-slate-500'}`}>{label}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-
-          <div className="p-4 space-y-5">
-            {/* Route */}
-            <div className="space-y-4 relative border-l-2 border-dashed border-slate-700 ml-3 pl-5">
-              <div className="relative">
-                <span className="absolute -left-[29px] top-0.5 w-4 h-4 rounded-full bg-amber-500 border-[3px] border-slate-900" />
-                <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Pickup</p>
-                <p className="text-sm font-bold text-white mt-0.5 flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="truncate">{activeJob.pickupAddress?.label || 'Pickup store'}</span>
-                </p>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {[activeJob.pickupAddress?.line1, activeJob.pickupAddress?.city, activeJob.pickupAddress?.state].filter(Boolean).join(', ')}
-                </p>
-                {mapsLink(activeJob.pickupAddress) && (
-                  <a
-                    href={mapsLink(activeJob.pickupAddress)!}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-bold active:bg-amber-500/20"
-                  >
-                    <Navigation className="w-3.5 h-3.5" /> Navigate to store
-                  </a>
-                )}
+                <ol className="flex items-start" aria-label="Delivery progress">
+                  {STEPS.map((label, i) => {
+                    const n = i + 1;
+                    const cur = stepOf(activeJob.status);
+                    const done = cur > n;
+                    const now = cur === n;
+                    return (
+                      <li key={label} className="flex-1 flex flex-col items-center relative">
+                        {i > 0 && <span className={`absolute top-3 right-1/2 w-full h-0.5 ${cur >= n ? 'bg-accent-400' : 'bg-white/10'}`} />}
+                        <span className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${done ? 'bg-accent-500 text-white' : now ? 'bg-accent-500 text-white ring-4 ring-accent-400/25' : 'bg-[#0d1424] text-slate-500 border border-white/15'}`}>
+                          {done ? '✓' : n}
+                        </span>
+                        <span className={`mt-2 text-[10.5px] font-bold text-center leading-tight ${cur >= n ? 'text-slate-100' : 'text-slate-500'}`}>{label}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
 
-              <div className="relative">
-                <span className="absolute -left-[29px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-[3px] border-slate-900" />
-                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Drop-off</p>
-                <p className="text-sm font-bold text-white mt-0.5">{activeJob.deliveryAddress?.recipientName}</p>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {activeJob.deliveryAddress?.line1}
-                  {activeJob.deliveryAddress?.landmark && (
-                    <span className="text-slate-400"> · Landmark: {activeJob.deliveryAddress.landmark}</span>
-                  )}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {activeJob.deliveryAddress?.city}, {activeJob.deliveryAddress?.state} {activeJob.deliveryAddress?.pincode && `\u2013 ${activeJob.deliveryAddress.pincode}`}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {activeJob.deliveryAddress?.phone && (
-                    <a
-                      href={`tel:${activeJob.deliveryAddress.phone}`}
-                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-bold active:bg-emerald-500/20"
-                    >
-                      <Phone className="w-3.5 h-3.5" /> Call customer
-                    </a>
-                  )}
-                  {mapsLink(activeJob.deliveryAddress) && (
-                    <a
-                      href={mapsLink(activeJob.deliveryAddress)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold active:bg-slate-700"
-                    >
-                      <Navigation className="w-3.5 h-3.5" /> Navigate
-                    </a>
-                  )}
+              {/* body */}
+              <div className="p-4 min-[380px]:p-5 space-y-5">
+                <div className="relative space-y-3">
+                  <span className="absolute left-[13px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-accent-400/60 to-emerald-400/60 rounded-full" />
+                  {routeBlock('pickup')}
+                  {routeBlock('drop')}
                 </div>
-              </div>
-            </div>
 
-            {jobError && (
-              <p className="text-xs text-red-300 bg-red-950/50 border border-red-900/60 rounded-xl p-3 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                {jobError}
-              </p>
-            )}
+                {jobError && <Notice tone="error">{jobError}</Notice>}
 
-            {/* Step actions */}
-            {['assigned', 'driver_accepted', 'driver_at_vendor'].includes(activeJob.status) && (
-              <div className="space-y-2.5">
-                <div
-                  className={`text-xs px-3.5 py-2.5 rounded-xl border flex items-start gap-2 ${
-                    parcelReady ? 'bg-emerald-950/50 border-emerald-700/60 text-emerald-300' : 'bg-amber-950/40 border-amber-800/60 text-amber-300'
-                  }`}
-                >
-                  <Package className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  {parcelReady ? 'Parcel is packed and ready for collection.' : 'Waiting for the seller to finish packing. You can collect it once it is marked ready.'}
-                </div>
-                <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 px-4 pt-4 pb-1 bg-gradient-to-t from-slate-900 from-70% to-transparent">
-                <Button
-                  onClick={() => handleUpdateStatus('picked_up')}
-                  disabled={!parcelReady}
-                  className="w-full h-14 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-base flex items-center justify-center gap-2 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Truck className="w-5 h-5" />
-                  Picked up from store
-                </Button>
-                </div>
-              </div>
-            )}
-
-            {activeJob.status === 'picked_up' && (
-              <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 px-4 pt-4 pb-1 bg-gradient-to-t from-slate-900 from-70% to-transparent">
-              <Button
-                onClick={() => handleUpdateStatus('out_for_delivery')}
-                className="w-full h-14 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold text-base flex items-center justify-center gap-2 rounded-2xl"
-              >
-                <Navigation className="w-5 h-5" />
-                Start delivery
-              </Button>
-              </div>
-            )}
-
-            {(activeJob.status === 'out_for_delivery' || activeJob.status === 'in_transit') && (
-              <form ref={pinForm} onSubmit={handleConfirmDelivery} className="p-4 bg-slate-800/60 rounded-2xl border border-slate-700 space-y-3 scroll-mt-20">
-                <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-                  <KeyRound className="w-4 h-4" />
-                  Customer handover PIN
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Ask the customer for the 4-digit PIN shown in their order tracking screen, then enter it to complete the delivery.
-                </p>
-
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete="one-time-code"
-                  maxLength={4}
-                  placeholder={'\u2022 \u2022 \u2022 \u2022'}
-                  aria-label="4-digit delivery PIN"
-                  value={otpInput}
-                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  className="w-full min-w-0 h-16 px-4 bg-slate-950 border-2 border-slate-700 focus:border-emerald-500 rounded-2xl font-mono text-center text-3xl font-black tracking-[0.5em] indent-[0.5em] text-white placeholder:text-slate-600 placeholder:tracking-[0.3em] focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
-                />
-
-                {otpError && (
-                  <p className="text-xs text-red-300 flex items-start gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                    {otpError}
-                  </p>
+                {['assigned', 'driver_accepted', 'driver_at_vendor'].includes(activeJob.status) && (
+                  <div className="space-y-3">
+                    <Notice tone={parcelReady ? 'success' : 'warn'}>
+                      {parcelReady ? 'The parcel is packed and ready for collection.' : 'Waiting for the seller to finish packing. You can collect it once it is marked ready.'}
+                    </Notice>
+                    <Sticky>
+                      <ActionButton tone="blue" size="lg" className="w-full" onClick={() => handleUpdateStatus('picked_up')} disabled={!parcelReady}>
+                        <Truck className="w-5 h-5" /> Picked up from store
+                      </ActionButton>
+                    </Sticky>
+                  </div>
                 )}
 
-                <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 px-4 pt-3 pb-1 bg-gradient-to-t from-slate-800 from-70% to-transparent rounded-b-2xl">
-                <Button
-                  type="submit"
-                  disabled={verifyingOtp || otpInput.trim().length < 4}
-                  className="w-full h-14 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-base rounded-2xl disabled:opacity-40 flex items-center justify-center gap-2"
-                >
-                  {verifyingOtp ? <Spinner size="sm" /> : (<><CheckCircle className="w-5 h-5" /> Confirm delivery</>)}
-                </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </section>
-      ) : (
-        <>
-          {jobError && (
-            <p className="text-xs text-red-300 bg-red-950/50 border border-red-900/60 rounded-xl p-3 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {jobError}
-            </p>
-          )}
-          {isOnline && openJobs.length > 0 ? (
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                Available jobs
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">{openJobs.length}</span>
-              </h3>
-              {openJobs.map((job) => (
-                <article key={job.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-mono text-slate-500">JOB #{job.id.slice(0, 8).toUpperCase()}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Trip earning</p>
-                    </div>
-                    <span className="text-2xl font-black text-amber-400 leading-none">{formatMoney(job.driverEarning || 0)}</span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2.5">
-                      <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-white truncate">{job.pickupAddress?.label || 'Pickup store'}</p>
-                        <p className="text-xs text-slate-400 truncate">{[job.pickupAddress?.line1, job.pickupAddress?.city].filter(Boolean).join(', ')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-white truncate">{job.deliveryAddress?.city}, {job.deliveryAddress?.state}</p>
-                        <p className="text-xs text-slate-400">Drop-off area</p>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleAcceptJob(job)}
-                    disabled={acceptingId === job.id}
-                    className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-base rounded-xl"
-                  >
-                    {acceptingId === job.id ? <Spinner size="sm" /> : 'Accept job'}
-                  </Button>
-                </article>
-              ))}
-            </div>
+                {activeJob.status === 'picked_up' && (
+                  <Sticky>
+                    <ActionButton tone="violet" size="lg" className="w-full" onClick={() => handleUpdateStatus('out_for_delivery')}>
+                      <Navigation className="w-5 h-5" /> Start delivery
+                    </ActionButton>
+                  </Sticky>
+                )}
+
+                {(activeJob.status === 'out_for_delivery' || activeJob.status === 'in_transit') && (
+                  <form ref={pinForm} onSubmit={handleConfirmDelivery} className="rounded-2xl border border-accent-400/25 bg-accent-400/[0.06] p-5 space-y-4 scroll-mt-24">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-accent-300"><KeyRound className="w-4 h-4" /> Customer handover PIN</div>
+                    <p className="text-[13px] text-slate-400 leading-relaxed">Ask the customer for the 4-digit PIN on their order tracking screen, then enter it to complete the delivery.</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      maxLength={4}
+                      placeholder={'• • • •'}
+                      aria-label="4-digit delivery PIN"
+                      value={otpInput}
+                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      className="w-full min-w-0 h-[4.5rem] px-4 bg-black/40 border-2 border-white/15 focus:border-accent-300 rounded-2xl font-mono text-center text-4xl font-black tracking-[0.5em] indent-[0.5em] text-white placeholder:text-slate-600 placeholder:tracking-[0.3em] focus:outline-none focus:ring-4 focus:ring-accent-400/20"
+                    />
+                    {otpError && <Notice tone="error">{otpError}</Notice>}
+                    <Sticky from="from-[#1b1e24]">
+                      <ActionButton type="submit" tone="green" size="lg" className="w-full" loading={verifyingOtp} disabled={otpInput.trim().length < 4}>
+                        <CheckCircle className="w-5 h-5" /> Confirm delivery
+                      </ActionButton>
+                    </Sticky>
+                  </form>
+                )}
+              </div>
+            </section>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 px-6 py-10 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-500 flex items-center justify-center mx-auto mb-3">
-                <Truck className="w-7 h-7" />
-              </div>
-              <h3 className="text-base font-bold text-white mb-1">No jobs right now</h3>
-              <p className="text-xs text-slate-400 max-w-[16rem] mx-auto leading-relaxed">
-                {isOnline ? 'Stay online. New delivery jobs appear here the moment a customer orders.' : 'Go online to see and accept available delivery jobs.'}
-              </p>
-            </div>
+            <>
+              {jobError && <Notice tone="error">{jobError}</Notice>}
+              {isOnline && openJobs.length > 0 ? (
+                <div className="space-y-4">
+                  <h2 className="flex items-center gap-2.5 text-sm font-extrabold text-white">
+                    Available jobs
+                    <span className="px-2.5 py-0.5 rounded-full bg-accent-500 text-white text-[11px] font-black">{openJobs.length}</span>
+                  </h2>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {openJobs.map((job) => (
+                      <article key={job.id} className="d-card-solid p-4 min-[380px]:p-5 flex flex-col gap-5 hover:border-accent-400/30 transition">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-mono text-slate-500">JOB #{job.id.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-xs text-slate-400 mt-1">Trip earning</p>
+                          </div>
+                          <span className="px-3.5 py-1.5 rounded-xl bg-accent-400/10 border border-accent-400/25 text-2xl font-black text-accent-300 leading-none tabular-nums">{formatMoney(job.driverEarning || 0)}</span>
+                        </div>
+                        <div className="relative space-y-4 pl-6">
+                          <span className="absolute left-[5px] top-3 bottom-3 w-0.5 border-l-2 border-dashed border-white/15" />
+                          <div className="relative">
+                            <span className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-accent-400 ring-4 ring-accent-400/20" />
+                            <p className="text-sm font-bold text-white truncate">{job.pickupAddress?.label || 'Pickup store'}</p>
+                            <p className="text-xs text-slate-400 truncate">{[job.pickupAddress?.line1, job.pickupAddress?.city].filter(Boolean).join(', ')}</p>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-emerald-400/20" />
+                            <p className="text-sm font-bold text-white truncate">{job.deliveryAddress?.city}, {job.deliveryAddress?.state}</p>
+                            <p className="text-xs text-slate-400">Drop-off area</p>
+                          </div>
+                        </div>
+                        <ActionButton tone="green" size="lg" className="w-full mt-auto" onClick={() => handleAcceptJob(job)} loading={acceptingId === job.id}>
+                          Accept job <ArrowRight className="w-4 h-4" />
+                        </ActionButton>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <RadarEmpty
+                  active={isOnline}
+                  title={isOnline ? 'Looking for jobs…' : 'You’re offline'}
+                  text={isOnline ? 'Stay online. New delivery jobs appear here the moment a customer places an order.' : 'Go online to see and accept available delivery jobs.'}
+                />
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+
+        {/* Side column */}
+        <aside className="space-y-5 lg:sticky lg:top-8">
+          <section className="d-card p-4 min-[380px]:p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-extrabold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-accent-300" /> Recent trips</h2>
+              <Link to="/history" className="text-xs font-bold text-accent-300 hover:text-accent-200">View all</Link>
+            </div>
+            {recentTrips.length === 0 ? (
+              <p className="text-sm text-slate-500 mt-4 leading-relaxed">Completed deliveries will appear here.</p>
+            ) : (
+              <ul className="mt-4 space-y-1">
+                {recentTrips.map((t) => (
+                  <li key={t.id} className="flex items-center gap-3 py-2.5 border-b border-white/[0.06] last:border-0">
+                    <span className="w-9 h-9 rounded-xl bg-emerald-400/10 text-emerald-300 flex items-center justify-center shrink-0"><CheckCircle className="w-4 h-4" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-white truncate">{t.deliveryAddress?.recipientName || 'Customer'}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{timeOf(t)}</p>
+                    </div>
+                    <span className="text-sm font-black text-accent-300 tabular-nums">+{formatMoney(t.driverEarning || 0)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="d-card p-5">
+            <h2 className="text-sm font-extrabold text-white flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-emerald-300" /> Delivery checklist</h2>
+            <ul className="mt-3 space-y-2.5 text-[13px] text-slate-400">
+              {['Collect the parcel only after the seller marks it ready', 'Ask the customer for the 4-digit PIN at the door', 'Never share or accept the PIN over chat'].map((t) => (
+                <li key={t} className="flex items-start gap-2.5"><CheckCircle className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />{t}</li>
+              ))}
+            </ul>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 };

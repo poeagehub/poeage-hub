@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { updateDocument, deleteField, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import type { Product } from '@poeage/types';
@@ -17,7 +18,7 @@ const toPaise = (v: string) => Math.round((parseFloat(v) || 0) * 100);
 const toRupees = (paise: number | undefined) => (paise && paise > 0 ? String(paise / 100) : '');
 
 const inputCls = (err?: string) =>
-  `w-full px-3 py-2 text-sm rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+  `w-full px-3 py-2 text-sm rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
     err ? 'border-red-400' : 'border-gray-300'
   }`;
 
@@ -95,9 +96,22 @@ export const EditProductModal: React.FC<{ product: Product; onClose: () => void 
     </div>
   );
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-2xl max-w-xl w-full max-h-[90vh] sm:max-h-[calc(100vh-3.5rem)] overflow-y-auto p-6 space-y-5 shadow-2xl text-left my-auto border border-gray-100"
+        >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] text-gray-400 font-semibold uppercase">Edit product</p>
@@ -119,14 +133,14 @@ export const EditProductModal: React.FC<{ product: Product; onClose: () => void 
           {field('Offer price (optional)', errors.offer, priceInput(offer, setOffer, errors.offer))}
         </div>
 
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs space-y-1.5">
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-100 text-xs space-y-1.5">
           <div className="flex justify-between"><span className="text-gray-600">Customer pays</span><b>{formatMoney(p.pays)}</b></div>
           <div className="flex justify-between"><span className="text-gray-600">Platform commission ({(product.commissionRate * 100).toFixed(0)}%)</span><b className="text-red-600">-{formatMoney(p.commission)}</b></div>
           <div className="flex justify-between"><span className="text-gray-600">You receive</span><b>{formatMoney(p.payout)}</b></div>
           {p.costP > 0 && (
-            <div className="flex justify-between border-t border-emerald-100 pt-1.5">
+            <div className="flex justify-between border-t border-teal-100 pt-1.5">
               <span className="text-gray-600">Profit after cost</span>
-              <b className={p.profit < 0 ? 'text-red-600' : 'text-emerald-700'}>{formatMoney(p.profit)}</b>
+              <b className={p.profit < 0 ? 'text-red-600' : 'text-teal-700'}>{formatMoney(p.profit)}</b>
             </div>
           )}
         </div>
@@ -145,11 +159,13 @@ export const EditProductModal: React.FC<{ product: Product; onClose: () => void 
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold min-w-[110px]">
+          <Button onClick={save} disabled={saving} className="bg-teal-600 hover:bg-teal-500 text-white font-bold min-w-[110px]">
             {saving ? <Spinner size="sm" /> : 'Save changes'}
           </Button>
         </div>
       </div>
     </div>
-  );
+  </div>,
+  document.body,
+);
 };

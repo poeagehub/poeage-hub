@@ -123,7 +123,7 @@ export const OrderTrackingPage: React.FC = () => {
       <div className="border-b border-gray-200 pb-4">
         <Link
           to="/account/orders"
-          className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mb-3 -ml-1 py-1"
+          className="text-xs font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1 mb-3 -ml-1 py-1"
         >
           <ChevronLeft className="w-4 h-4" />
           All orders
@@ -146,7 +146,7 @@ export const OrderTrackingPage: React.FC = () => {
         <div className="mt-3 flex items-end justify-between gap-3 p-3 sm:p-0 bg-white sm:bg-transparent border sm:border-0 border-gray-200 rounded-xl">
           <div>
             <p className="text-[11px] text-gray-400">Total amount</p>
-            <p className="text-xl sm:text-2xl font-black text-blue-600 leading-tight">{formatMoney(order.pricing.grandTotal)}</p>
+            <p className="text-xl sm:text-2xl font-black text-primary-600 leading-tight">{formatMoney(order.pricing.grandTotal)}</p>
           </div>
           <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 rounded-full px-2.5 py-1">
             {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
@@ -156,20 +156,20 @@ export const OrderTrackingPage: React.FC = () => {
 
       {/* 4-Digit Delivery Verification OTP Banner (Crucial for Doorstep Handover) */}
       {delivery && deliveryPin && shownStatus !== 'delivered' && shownStatus !== 'cancelled' && (
-        <div className="p-4 sm:p-5 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 bg-gradient-to-br from-primary-600 to-indigo-700 text-white rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
               <KeyRound className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-xs font-medium text-blue-100">Delivery Handover PIN</p>
+              <p className="text-xs font-medium text-primary-100">Delivery Handover PIN</p>
               <h3 className="text-sm font-bold text-white">Share this OTP with driver at delivery</h3>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-2" aria-label={`Delivery PIN ${deliveryPin}`}>
               {deliveryPin.split('').map((d, i) => (
-                <span key={i} className="w-12 h-14 sm:w-14 sm:h-16 flex items-center justify-center font-mono text-3xl font-black bg-white text-blue-700 rounded-xl shadow-inner">
+                <span key={i} className="w-12 h-14 sm:w-14 sm:h-16 flex items-center justify-center font-mono text-3xl font-black bg-white text-primary-700 rounded-xl shadow-inner">
                   {d}
                 </span>
               ))}
@@ -181,7 +181,7 @@ export const OrderTrackingPage: React.FC = () => {
       {/* Live Order Timeline Stepper */}
       <Card className="p-4 sm:p-6">
         <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-blue-600" />
+          <Clock className="w-4 h-4 text-primary-600" />
           Delivery progress
         </h2>
 
@@ -216,7 +216,7 @@ export const OrderTrackingPage: React.FC = () => {
                     isCompleted
                       ? 'bg-green-600 text-white shadow-sm'
                       : isCurrent
-                      ? 'bg-blue-600 text-white ring-4 ring-blue-100 animate-pulse'
+                      ? 'bg-primary-600 text-white ring-4 ring-primary-100 animate-pulse'
                       : 'bg-gray-100 text-gray-400 border border-gray-200'
                   }`}
                 >
@@ -226,7 +226,7 @@ export const OrderTrackingPage: React.FC = () => {
                 <div className="min-w-0 pt-1 md:pt-0">
                   <h3 className={`text-sm md:text-xs font-bold ${isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'}`}>
                     {step.label}
-                    {isCurrent && <span className="ml-2 text-[10px] font-bold text-blue-600 bg-blue-50 rounded-full px-2 py-0.5 align-middle">Now</span>}
+                    {isCurrent && <span className="ml-2 text-[10px] font-bold text-primary-600 bg-primary-50 rounded-full px-2 py-0.5 align-middle">Now</span>}
                   </h3>
                   <p className="text-xs md:text-[11px] text-gray-500 leading-relaxed mt-0.5">{step.description}</p>
                 </div>
@@ -241,12 +241,12 @@ export const OrderTrackingPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <Card className="p-4 sm:p-6">
             <h2 className="text-sm sm:text-base font-bold text-gray-900 pb-3 border-b border-gray-100 mb-2 sm:mb-4 flex items-center gap-2">
-              <Package className="w-4 h-4 text-blue-600" />
-              Items in this Shipment ({order.items.length})
+              <Package className="w-4 h-4 text-primary-600" />
+              Items in this Shipment ({(order.items ?? []).length})
             </h2>
 
             <div className="divide-y divide-gray-100">
-              {order.items.map((item, idx) => (
+              {(order.items ?? []).map((item, idx) => (
                 <div key={idx} className="py-3.5 sm:py-4 flex items-center gap-3 sm:gap-4">
                   {item.imageURL ? (
                     <img
@@ -263,7 +263,7 @@ export const OrderTrackingPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <Link
                       to={`/product/${item.productId}`}
-                      className="font-bold text-gray-900 text-sm hover:text-blue-600 line-clamp-2 leading-snug"
+                      className="font-bold text-gray-900 text-sm hover:text-primary-600 line-clamp-2 leading-snug"
                     >
                       {item.name}
                     </Link>
@@ -283,7 +283,7 @@ export const OrderTrackingPage: React.FC = () => {
           {/* Delivery Address */}
           <Card className="p-5 space-y-3">
             <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-blue-600" />
+              <MapPin className="w-4 h-4 text-primary-600" />
               Delivery Destination
             </h3>
             <div className="text-xs text-gray-600 leading-relaxed">
@@ -299,13 +299,13 @@ export const OrderTrackingPage: React.FC = () => {
 
           {/* Assigned Driver Card */}
           {delivery && (delivery as any).driverName && (
-            <Card className="p-5 space-y-3 border-blue-200 bg-blue-50/30">
+            <Card className="p-5 space-y-3 border-primary-200 bg-primary-50/30">
               <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Truck className="w-4 h-4 text-blue-600" />
+                <Truck className="w-4 h-4 text-primary-600" />
                 Delivery Partner
               </h3>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
+                <div className="w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center text-sm">
                   {(delivery as any).driverName[0]}
                 </div>
                 <div>
@@ -340,7 +340,7 @@ export const OrderTrackingPage: React.FC = () => {
               )}
               <div className="border-t border-gray-100 pt-2 flex justify-between font-bold text-gray-900 text-sm">
                 <span>Total Amount</span>
-                <span className="text-blue-600">{formatMoney(order.pricing.grandTotal)}</span>
+                <span className="text-primary-600">{formatMoney(order.pricing.grandTotal)}</span>
               </div>
             </div>
           </Card>

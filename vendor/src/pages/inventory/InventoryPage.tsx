@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useVendorAuth } from '../../context/AuthContext';
 import {
   subscribeToCollection,
@@ -145,7 +146,7 @@ export const InventoryPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Inventory & Stock</h1>
@@ -174,7 +175,7 @@ export const InventoryPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Products', value: stats.skus, icon: Boxes, tone: 'bg-blue-50 text-blue-600' },
-          { label: 'Units available', value: stats.units, icon: PackageCheck, tone: 'bg-emerald-50 text-emerald-600' },
+          { label: 'Units available', value: stats.units, icon: PackageCheck, tone: 'bg-teal-50 text-teal-600' },
           { label: 'Low stock', value: stats.low, icon: AlertTriangle, tone: 'bg-amber-50 text-amber-600' },
           { label: 'Out of stock', value: stats.out, icon: PackageX, tone: 'bg-red-50 text-red-600' },
         ].map((t) => (
@@ -204,7 +205,7 @@ export const InventoryPage: React.FC = () => {
               key={id}
               onClick={() => setFilter(id)}
               className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors ${
-                filter === id ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                filter === id ? 'bg-teal-600 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {label}
@@ -222,7 +223,7 @@ export const InventoryPage: React.FC = () => {
             placeholder="Search product..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
           />
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
         </div>
@@ -281,7 +282,7 @@ export const InventoryPage: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => setEditing(r)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border border-emerald-200 inline-flex items-center gap-1"
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-700 hover:bg-teal-50 border border-teal-200 inline-flex items-center gap-1"
                       >
                         <SlidersHorizontal className="w-3.5 h-3.5" />
                         {r.inv ? 'Adjust' : 'Set up'}
@@ -298,7 +299,7 @@ export const InventoryPage: React.FC = () => {
       {showHistory && (
         <Card className="p-5">
           <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <History className="w-4 h-4 text-emerald-600" /> Recent stock changes
+            <History className="w-4 h-4 text-teal-600" /> Recent stock changes
           </h3>
           {recentLogs.length === 0 ? (
             <p className="text-xs text-gray-500">No stock changes recorded yet.</p>
@@ -314,7 +315,7 @@ export const InventoryPage: React.FC = () => {
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className={`font-black ${l.change > 0 ? 'text-emerald-600' : l.change < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                    <p className={`font-black ${l.change > 0 ? 'text-teal-600' : l.change < 0 ? 'text-red-600' : 'text-gray-600'}`}>
                       {l.change > 0 ? `+${l.change}` : l.change}
                     </p>
                     <p className="text-[11px] text-gray-400">
@@ -439,9 +440,22 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
     ['set', 'Set exact', <Equal key="s" className="w-3.5 h-3.5" />],
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[92vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-2xl max-w-md w-full max-h-[90vh] sm:max-h-[calc(100vh-3.5rem)] overflow-y-auto p-6 space-y-5 shadow-2xl text-left my-auto border border-gray-100"
+        >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] text-gray-400 font-semibold uppercase">{isNew ? 'Set up stock' : 'Adjust stock'}</p>
@@ -472,7 +486,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
                 key={id}
                 onClick={() => changeType(id)}
                 className={`py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
-                  type === id ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'
+                  type === id ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-500'
                 }`}
               >
                 {icon}
@@ -494,7 +508,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
               value={qty}
               onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
               placeholder="0"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
             />
           </div>
           {qty !== '' && (
@@ -503,7 +517,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none"
               >
                 {REASONS[isNew ? 'set' : type].map((r) => (
                   <option key={r}>{r}</option>
@@ -515,7 +529,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
                 maxLength={120}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Note (optional)"
-                className="mt-2 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="mt-2 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
             </div>
           )}
@@ -527,7 +541,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
                 min={0}
                 value={reorder}
                 onChange={(e) => setReorder(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
             </div>
             <div>
@@ -538,7 +552,7 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
                 maxLength={40}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. A-12"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
             </div>
           </div>
@@ -555,11 +569,13 @@ const AdjustModal: React.FC<{ row: Row; vendorId: string; actorId: string; onClo
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">
+          <Button onClick={save} disabled={saving} className="bg-teal-600 hover:bg-teal-500 text-white font-bold">
             {saving ? <Spinner size="sm" /> : 'Save'}
           </Button>
         </div>
       </div>
     </div>
-  );
+  </div>,
+  document.body,
+);
 };

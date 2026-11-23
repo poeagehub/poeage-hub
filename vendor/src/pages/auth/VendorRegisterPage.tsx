@@ -43,15 +43,15 @@ export const VendorRegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full border-slate-800 bg-slate-900 text-white shadow-2xl">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-teal-950/40 via-slate-950 to-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="max-w-md w-full border-slate-800/80 bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl rounded-3xl animate-in fade-in zoom-in-95 duration-200">
         <CardHeader className="text-center space-y-3 pb-4">
-          <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-14 h-14 bg-gradient-to-tr from-teal-500/25 to-teal-400/10 border border-teal-500/30 rounded-2xl text-teal-400 flex items-center justify-center mx-auto shadow-inner">
             <Store className="w-7 h-7" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold tracking-tight text-white">Create Seller Account</CardTitle>
-            <p className="text-xs uppercase tracking-widest text-emerald-400 font-semibold mt-1">
+            <CardTitle className="text-2xl font-black tracking-tight text-white">Create Seller Account</CardTitle>
+            <p className="text-xs uppercase tracking-widest text-teal-400 font-bold mt-1">
               Step 1 of 2: Account Setup
             </p>
           </div>
@@ -62,7 +62,7 @@ export const VendorRegisterPage: React.FC = () => {
 
         <CardContent className="space-y-6 pt-2">
           {errorMsg && (
-            <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-lg flex items-start gap-2.5 text-xs text-red-300">
+            <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-xl flex items-start gap-2.5 text-xs text-red-300">
               <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
@@ -76,7 +76,7 @@ export const VendorRegisterPage: React.FC = () => {
               placeholder="Rajesh Kumar"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-emerald-500"
+              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-teal-400 focus:ring-1 focus:ring-teal-400/40 rounded-xl"
             />
 
             <Input
@@ -87,7 +87,7 @@ export const VendorRegisterPage: React.FC = () => {
               placeholder="rajesh@enterprises.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-emerald-500"
+              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-teal-400 focus:ring-1 focus:ring-teal-400/40 rounded-xl"
             />
 
             <Input
@@ -97,7 +97,7 @@ export const VendorRegisterPage: React.FC = () => {
               placeholder="Minimum 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-emerald-500"
+              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-teal-400 focus:ring-1 focus:ring-teal-400/40 rounded-xl"
             />
 
             <Input
@@ -107,12 +107,12 @@ export const VendorRegisterPage: React.FC = () => {
               placeholder="Repeat password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-emerald-500"
+              className="bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-teal-400 focus:ring-1 focus:ring-teal-400/40 rounded-xl"
             />
 
             <Button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 shadow-lg active:bg-emerald-700 mt-2"
+              className="w-full bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-600 text-white font-bold py-2.5 shadow-lg shadow-teal-900/30 active:scale-[0.99] transition-all duration-200 rounded-xl mt-2"
               isLoading={loading}
             >
               Continue to Business KYC
@@ -121,7 +121,7 @@ export const VendorRegisterPage: React.FC = () => {
 
           <p className="text-center text-xs text-slate-400">
             Already registered as a seller?{' '}
-            <Link to="/login" className="font-semibold text-emerald-400 hover:text-emerald-300">
+            <Link to="/login" className="font-semibold text-teal-400 hover:text-teal-300 transition-colors">
               Sign in
             </Link>
           </p>

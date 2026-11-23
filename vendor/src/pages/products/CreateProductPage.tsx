@@ -64,7 +64,7 @@ const MoneyInput: React.FC<MoneyInputProps> = ({ label, value, onChange, require
         value={value}
         placeholder={placeholder ?? '0'}
         onChange={(e) => onChange(sanitizeMoney(e.target.value))}
-        className={`w-full pl-7 pr-3.5 py-2 text-sm rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+        className={`w-full pl-7 pr-3.5 py-2 text-sm rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
           error ? 'border-red-400' : 'border-gray-300'
         }`}
       />
@@ -331,7 +331,7 @@ export const CreateProductPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
         <Link to="/products" className="p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100">
           <ArrowLeft className="w-5 h-5" />
@@ -373,7 +373,7 @@ export const CreateProductPage: React.FC = () => {
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -408,7 +408,7 @@ export const CreateProductPage: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe product highlights, dimensions, box contents, and features..."
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </CardContent>
@@ -454,35 +454,35 @@ export const CreateProductPage: React.FC = () => {
             </div>
 
             {/* Commission + live breakdown */}
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
+            <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-4 space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                <span className="font-bold text-teal-900 flex items-center gap-1.5">
                   <Info className="w-3.5 h-3.5" /> Platform commission (set by admin)
                 </span>
-                <span className="font-bold text-emerald-800 bg-white border border-emerald-200 rounded-full px-2.5 py-0.5">
+                <span className="font-bold text-teal-800 bg-white border border-teal-200 rounded-full px-2.5 py-0.5">
                   {Number((commissionRate * 100).toFixed(1))}%
                 </span>
               </div>
 
               <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="bg-white rounded-lg border border-emerald-100 p-3">
+                <div className="bg-white rounded-lg border border-teal-100 p-3">
                   <dt className="text-gray-500">Customer pays</dt>
                   <dd className="mt-0.5 text-sm font-bold text-gray-900">{inr(pricing.customerPays)}</dd>
                   {pricing.discountPct > 0 && (
                     <dd className="text-[11px] text-green-600 font-semibold">{pricing.discountPct}% off MRP</dd>
                   )}
                 </div>
-                <div className="bg-white rounded-lg border border-emerald-100 p-3">
+                <div className="bg-white rounded-lg border border-teal-100 p-3">
                   <dt className="text-gray-500">Commission</dt>
                   <dd className="mt-0.5 text-sm font-bold text-amber-700">− {inr(pricing.commission)}</dd>
                 </div>
-                <div className="bg-white rounded-lg border border-emerald-100 p-3">
+                <div className="bg-white rounded-lg border border-teal-100 p-3">
                   <dt className="text-gray-500">Your payout</dt>
                   <dd className="mt-0.5 text-sm font-bold text-gray-900">{inr(pricing.payout)}</dd>
                 </div>
-                <div className="bg-white rounded-lg border border-emerald-100 p-3">
+                <div className="bg-white rounded-lg border border-teal-100 p-3">
                   <dt className="text-gray-500">Profit / unit</dt>
-                  <dd className={`mt-0.5 text-sm font-bold ${pricing.profit < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                  <dd className={`mt-0.5 text-sm font-bold ${pricing.profit < 0 ? 'text-red-600' : 'text-teal-700'}`}>
                     {pricing.profit < 0 ? '− ' : ''}
                     {inr(Math.abs(pricing.profit))}
                   </dd>
@@ -519,7 +519,7 @@ export const CreateProductPage: React.FC = () => {
                 value={stockQuantity}
                 placeholder="0"
                 onChange={(e) => setStockQuantity(sanitizeInt(e.target.value))}
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -532,7 +532,7 @@ export const CreateProductPage: React.FC = () => {
                 value={reorderLevel}
                 placeholder="5"
                 onChange={(e) => setReorderLevel(sanitizeInt(e.target.value))}
-                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2 text-sm rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </CardContent>
@@ -566,10 +566,10 @@ export const CreateProductPage: React.FC = () => {
               }}
               onClick={() => fileInputRef.current?.click()}
               className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
-                dragOver ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 hover:border-emerald-400 hover:bg-gray-50'
+                dragOver ? 'border-teal-500 bg-teal-50' : 'border-gray-300 hover:border-teal-400 hover:bg-gray-50'
               }`}
             >
-              <UploadCloud className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+              <UploadCloud className="w-8 h-8 text-teal-600 mx-auto mb-2" />
               <p className="text-sm font-semibold text-gray-800">Click to choose images, or drag & drop here</p>
               <p className="text-xs text-gray-400 mt-1">Uploaded securely to your store's storage</p>
               <input
@@ -603,7 +603,7 @@ export const CreateProductPage: React.FC = () => {
                         addLinkImage();
                       }
                     }}
-                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <Button type="button" variant="outline" onClick={addLinkImage}>
@@ -630,7 +630,7 @@ export const CreateProductPage: React.FC = () => {
                     />
 
                     {idx === 0 && !img.error && (
-                      <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <span className="absolute top-1.5 left-1.5 bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                         Cover
                       </span>
                     )}
@@ -683,7 +683,7 @@ export const CreateProductPage: React.FC = () => {
           </Link>
           <Button
             type="submit"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 shadow-md"
+            className="bg-teal-600 hover:bg-teal-500 text-white font-semibold px-6 shadow-md"
             isLoading={loading}
             disabled={uploading}
           >

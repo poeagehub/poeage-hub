@@ -1,0 +1,3 @@
+# Internal admin portal — not for search engines.
+User-agent: *
+Disallow: /

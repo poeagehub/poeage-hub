@@ -56,8 +56,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
-  const [couponCode, setCouponCode] = useState<string | null>(null);
-  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  // The discount is always worked out from the *current* cart, so changing quantities keeps it correct.
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number; max: number | null; min: number } | null>(null);
 
   // Sync to local storage
   useEffect(() => {
@@ -109,8 +109,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           {
             userId: user.uid,
             items,
-            couponCode: couponCode || null,
-            couponDiscount,
           },
           true
         );
@@ -121,7 +119,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const timeout = setTimeout(saveRemoteCart, 800);
     return () => clearTimeout(timeout);
-  }, [items, user, couponCode, couponDiscount]);
+  }, [items, user]);
 
   // Calculations
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -129,6 +127,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const qualifiesForFreeDelivery =
     settings.freeDeliveryThreshold > 0 && subtotal >= settings.freeDeliveryThreshold;
   const deliveryCharge = items.length === 0 || qualifiesForFreeDelivery ? 0 : settings.deliveryChargeFlat;
+
+  // Coupon discount follows the current subtotal; it disappears if the cart drops below the coupon's minimum.
+  const couponActive = !!appliedCoupon && subtotal > 0 && subtotal >= appliedCoupon.min;
+  const couponCode = couponActive ? appliedCoupon!.code : null;
+  const couponDiscount = (() => {
+    if (!couponActive || !appliedCoupon) return 0;
+    const raw = appliedCoupon.type === 'percentage' ? Math.floor((subtotal * appliedCoupon.value) / 100) : appliedCoupon.value;
+    const capped = appliedCoupon.type === 'percentage' && appliedCoupon.max ? Math.min(raw, appliedCoupon.max) : raw;
+    return Math.min(capped, subtotal);
+  })();
   const grandTotal = Math.max(0, subtotal + deliveryCharge - couponDiscount);
 
   const addToCart = useCallback((product: Product, quantity = 1, variantId?: string) => {
@@ -197,8 +205,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(() => {
     setItems([]);
-    setCouponCode(null);
-    setCouponDiscount(0);
+    setAppliedCoupon(null);
     try {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch {
@@ -208,43 +215,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const applyCoupon = useCallback(async (code: string): Promise<{ success: boolean; message: string }> => {
     const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) {
-      return { success: false, message: 'Please enter a coupon code.' };
-    }
+    if (!cleanCode) return { success: false, message: 'Please enter a coupon code.' };
+    if (!user) return { success: false, message: 'Please sign in to use a coupon.' };
 
-    // Try fetching from Firestore collection
     try {
       const coupon = await getDocument<any>(COLLECTION.COUPONS, cleanCode);
-      if (!coupon || !coupon.isActive) {
+      const now = Date.now();
+      const from = coupon?.validFrom?.toDate?.().getTime?.() ?? 0;
+      const until = coupon?.validUntil?.toDate?.().getTime?.() ?? Infinity;
+      if (!coupon || !coupon.isActive || now < from || now > until) {
         return { success: false, message: 'Invalid or expired coupon code.' };
       }
+      // One use per customer (enforced by the database rules too).
+      const used = await getDocument<any>('couponRedemptions', `${user.uid}_${cleanCode}`).catch(() => null);
+      if (used) return { success: false, message: 'You have already used this coupon.' };
       if (subtotal < (coupon.minOrderAmount || 0)) {
-        return {
-          success: false,
-          message: `Minimum order amount for this coupon is ₹${((coupon.minOrderAmount || 0) / 100).toFixed(2)}.`,
-        };
+        return { success: false, message: `Add ₹${(((coupon.minOrderAmount || 0) - subtotal) / 100).toFixed(2)} more to use this coupon (minimum ₹${((coupon.minOrderAmount || 0) / 100).toFixed(2)}).` };
       }
-
-      let discount = 0;
-      if (coupon.discountType === 'percentage') {
-        const calculated = Math.round((subtotal * coupon.discountValue) / 100);
-        discount = coupon.maxDiscountAmount ? Math.min(calculated, coupon.maxDiscountAmount) : calculated;
-      } else {
-        discount = coupon.discountValue;
-      }
-
-      setCouponCode(cleanCode);
-      setCouponDiscount(discount);
-      return { success: true, message: `Coupon ${cleanCode} applied successfully!` };
+      setAppliedCoupon({
+        code: cleanCode,
+        type: coupon.discountType,
+        value: coupon.discountValue,
+        max: coupon.maxDiscountAmount ?? null,
+        min: coupon.minOrderAmount ?? 0,
+      });
+      return { success: true, message: `Coupon ${cleanCode} applied!` };
     } catch {
       return { success: false, message: 'Could not validate coupon at this time.' };
     }
-  }, [subtotal]);
+  }, [subtotal, user]);
 
-  const removeCoupon = useCallback(() => {
-    setCouponCode(null);
-    setCouponDiscount(0);
-  }, []);
+  const removeCoupon = useCallback(() => setAppliedCoupon(null), []);
 
   return (
     <CartContext.Provider

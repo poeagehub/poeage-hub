@@ -74,7 +74,7 @@ export const OrderSuccessPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
-              <MapPin className="w-4 h-4 text-blue-600" />
+              <MapPin className="w-4 h-4 text-primary-600" />
               Delivery Destination
             </div>
             <p className="text-xs text-gray-600 leading-relaxed">
@@ -121,7 +121,7 @@ export const OrderSuccessPage: React.FC = () => {
             </div>
             <div className="flex justify-between items-center pt-3 border-t border-gray-100 text-sm font-bold">
               <span>Total Paid</span>
-              <span className="text-base text-blue-600">{formatMoney(order.pricing.grandTotal)}</span>
+              <span className="text-base text-primary-600">{formatMoney(order.pricing.grandTotal)}</span>
             </div>
           </div>
         )}
@@ -129,7 +129,7 @@ export const OrderSuccessPage: React.FC = () => {
         {/* Actions */}
         <div className="pt-4 flex flex-col sm:flex-row gap-3">
           <Link to={`/account/orders/${orderId}`} className="flex-1">
-            <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center justify-center gap-2">
+            <Button size="lg" className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold flex items-center justify-center gap-2">
               <PackageCheck className="w-5 h-5" />
               Track Live Order
             </Button>

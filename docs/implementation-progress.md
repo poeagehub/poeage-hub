@@ -19,7 +19,7 @@
 - [x] `storage.rules` — Cloud Storage security rules
 - [x] `README.md`
 
-### User App (`user/`) — port 5173
+### User App (`user/`) — port 5180
 - [x] `package.json`
 - [x] `vite.config.ts`
 - [x] `tsconfig.json`
@@ -32,7 +32,7 @@
 - [x] `src/App.tsx` — Customer Store shell with hero + stats
 - [x] `public/favicon.svg`
 
-### Admin App (`admin/`) — port 5174
+### Admin App (`admin/`) — port 5181
 - [x] `package.json`
 - [x] `vite.config.ts`
 - [x] `tsconfig.json`
@@ -45,7 +45,7 @@
 - [x] `src/App.tsx` — Admin Control Center with sidebar layout
 - [x] `public/favicon.svg`
 
-### Vendor App (`vendor/`) — port 5175
+### Vendor App (`vendor/`) — port 5182
 - [x] `package.json`
 - [x] `vite.config.ts`
 - [x] `tsconfig.json`
@@ -58,7 +58,7 @@
 - [x] `src/App.tsx` — Vendor Portal dashboard shell
 - [x] `public/favicon.svg`
 
-### Driver App (`driver/`) — port 5176
+### Driver App (`driver/`) — port 5183
 - [x] `package.json`
 - [x] `vite.config.ts`
 - [x] `tsconfig.json`

@@ -67,7 +67,7 @@ export const updateCustomerStatus = https.onCall({ cors: true }, async (request)
   try {
     await adminDb.collection('auditLogs').add({
       actorId: uid,
-      actorEmail: token.email || 'admin@poeagehub.com',
+      actorEmail: token.email || 'admin123@gmail.com',
       actorRole: roles[0] || 'admin',
       action: 'customer_status_updated',
       entityType: 'customer',

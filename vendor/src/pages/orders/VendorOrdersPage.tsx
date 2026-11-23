@@ -189,7 +189,7 @@ export const VendorOrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Title & Refresh */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -232,9 +232,9 @@ export const VendorOrdersPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-sm ring-1 ring-teal-500/30'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -259,7 +259,7 @@ export const VendorOrdersPage: React.FC = () => {
             placeholder="Search order or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all"
           />
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
         </div>
@@ -286,7 +286,7 @@ export const VendorOrdersPage: React.FC = () => {
             const isUpdating = updatingId === order.id;
 
             return (
-              <Card key={order.id} className="p-5 hover:shadow-md transition-shadow">
+              <Card key={order.id} className="p-5 card-hover rounded-2xl border border-gray-200/80 bg-white shadow-xs">
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3 mb-4">
                   <div className="flex items-center gap-3">
@@ -307,7 +307,7 @@ export const VendorOrdersPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-gray-400 block text-[10px]">Net Payout Earning</span>
-                      <span className="font-black text-emerald-600 text-sm">{formatMoney(order.vendorEarning)}</span>
+                      <span className="font-black text-teal-600 text-sm">{formatMoney(order.vendorEarning)}</span>
                     </div>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ export const VendorOrdersPage: React.FC = () => {
                         size="sm"
                         disabled={isUpdating}
                         onClick={() => handleUpdateStatus(order.id, 'confirmed')}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5"
+                        className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
                       >
                         {isUpdating ? <Spinner size="sm" /> : <CheckCircle className="w-3.5 h-3.5" />}
                         Accept Order

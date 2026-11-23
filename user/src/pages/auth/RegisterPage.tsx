@@ -60,7 +60,7 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-[70vh] sm:min-h-[85vh] flex items-start sm:items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-md w-full shadow-lg border-gray-200">
         <CardHeader className="text-center space-y-2">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
+          <div className="w-12 h-12 bg-primary-600 rounded-xl text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
             P
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">Create your account</CardTitle>
@@ -132,15 +132,15 @@ export const RegisterPage: React.FC = () => {
                 type="checkbox"
                 checked={agreeTerms}
                 onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-0.5"
               />
               <label htmlFor="terms" className="text-xs text-gray-600">
                 I agree to the{' '}
-                <Link to="/terms" className="text-blue-600 underline">
+                <Link to="/terms" className="text-primary-600 underline">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link to="/privacy" className="text-blue-600 underline">
+                <Link to="/privacy" className="text-primary-600 underline">
                   Privacy Policy
                 </Link>
                 .
@@ -154,7 +154,7 @@ export const RegisterPage: React.FC = () => {
 
           <p className="text-center text-xs text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-500">
+            <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-500">
               Sign in
             </Link>
           </p>

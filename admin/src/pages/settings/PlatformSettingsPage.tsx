@@ -15,6 +15,7 @@ import { COLLECTION } from '@poeage/config';
 import type { AuditLog } from '@poeage/types';
 import { Card, CardContent, Spinner } from '@poeage/ui';
 import { useAdminAuth } from '../../context/AuthContext';
+import { Switch } from '../../components/ui/Switch';
 import {
   Store,
   Truck,
@@ -43,6 +44,7 @@ interface Form {
   defaultCommissionPct: string; // %
   gstOnCommissionPct: string; // %
   driverEarning: string; // ₹
+  minPayout: string; // ₹
   defaultGstPct: string; // %
   razorpayKeyId: string;
   maintenanceMode: boolean;
@@ -64,6 +66,7 @@ function toForm(s: PlatformSettingsData): Form {
     defaultCommissionPct: pct(s.defaultCommissionRate),
     gstOnCommissionPct: pct(s.gstOnCommission),
     driverEarning: rupees(s.driverEarningPerDelivery),
+    minPayout: rupees(s.minPayoutAmount),
     defaultGstPct: pct(s.defaultGstRate),
     razorpayKeyId: s.razorpayKeyId,
     maintenanceMode: s.maintenanceMode,
@@ -86,6 +89,7 @@ function toSettings(f: Form): PlatformSettingsData {
     defaultCommissionRate: toRate(f.defaultCommissionPct),
     gstOnCommission: toRate(f.gstOnCommissionPct),
     driverEarningPerDelivery: toPaise(f.driverEarning),
+    minPayoutAmount: toPaise(f.minPayout),
     defaultGstRate: toRate(f.defaultGstPct),
     razorpayKeyId: f.razorpayKeyId.trim(),
     maintenanceMode: f.maintenanceMode,
@@ -104,6 +108,7 @@ const FIELD_LABELS: Record<keyof PlatformSettingsData, string> = {
   defaultCommissionRate: 'Default commission',
   gstOnCommission: 'GST on commission',
   driverEarningPerDelivery: 'Driver earning / delivery',
+  minPayoutAmount: 'Minimum payout',
   defaultGstRate: 'Default product GST',
   razorpayKeyId: 'Razorpay key ID',
   maintenanceMode: 'Maintenance mode',
@@ -125,7 +130,7 @@ const decimal = (raw: string) => {
 const integer = (raw: string) => raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
 
 const inputCls =
-  'w-full px-3.5 py-2 text-sm rounded-lg border bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+  'w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25 focus:border-primary-500 transition-all';
 
 interface FieldProps {
   label: string;
@@ -146,18 +151,18 @@ const Field: React.FC<FieldProps & { input?: React.InputHTMLAttributes<HTMLInput
   children,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
     {children ?? (
       <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{prefix}</span>}
+        {prefix && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{prefix}</span>}
         <input
           {...input}
-          className={`${inputCls} ${prefix ? 'pl-7' : ''} ${suffix ? 'pr-10' : ''} ${error ? 'border-red-400' : 'border-gray-300'}`}
+          className={`${inputCls} ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-10' : ''} ${error ? 'border-red-400 ring-1 ring-red-400/30' : ''}`}
         />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>}
+        {suffix && <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{suffix}</span>}
       </div>
     )}
-    {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : hint ? <p className="mt-1 text-[11px] text-gray-400">{hint}</p> : null}
+    {error ? <p className="mt-1 text-xs text-red-600 font-medium">{error}</p> : hint ? <p className="mt-1 text-[11px] text-slate-400">{hint}</p> : null}
   </div>
 );
 
@@ -168,12 +173,12 @@ const SectionCard: React.FC<{ id: string; icon: React.ReactNode; title: string; 
   desc,
   children,
 }) => (
-  <Card id={id} className="scroll-mt-24 border-gray-200">
-    <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start gap-3">
-      <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">{icon}</div>
+  <Card id={id} className="scroll-mt-24 border-slate-200/80 shadow-xs card-modern-hover overflow-hidden rounded-2xl">
+    <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex items-start gap-3 bg-gradient-to-r from-slate-50/50 to-transparent">
+      <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0 shadow-xs ring-1 ring-primary-100">{icon}</div>
       <div>
-        <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
+        <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
       </div>
     </div>
     <CardContent className="p-6 space-y-4">{children}</CardContent>
@@ -262,6 +267,7 @@ export const PlatformSettingsPage: React.FC = () => {
     if (!(gstC >= 0 && gstC <= 40)) e.gstOnCommissionPct = 'Enter a rate between 0% and 40%.';
     const gst = parseFloat(form.defaultGstPct);
     if (!(gst >= 0 && gst <= 40)) e.defaultGstPct = 'Enter a rate between 0% and 40%.';
+    if (!(toPaise(form.minPayout) >= 100 && toPaise(form.minPayout) <= 10_000_000)) e.minPayout = 'Enter an amount between ₹1 and ₹1,00,000.';
     if (!(parseInt(form.maxDeliveryRadiusKm, 10) > 0)) e.maxDeliveryRadiusKm = 'Enter a radius greater than 0 km.';
     if (form.freeDeliveryThreshold && toPaise(form.freeDeliveryThreshold) > 0 && toPaise(form.deliveryCharge) < 0) e.deliveryCharge = 'Invalid amount.';
     if (form.razorpayKeyId.trim() && !/^rzp_(test|live)_[A-Za-z0-9]+$/.test(form.razorpayKeyId.trim()))
@@ -352,7 +358,7 @@ export const PlatformSettingsPage: React.FC = () => {
 
   const formatValue = (k: keyof PlatformSettingsData, v: unknown): string => {
     if (typeof v === 'boolean') return v ? 'On' : 'Off';
-    if (k === 'deliveryChargeFlat' || k === 'freeDeliveryThreshold' || k === 'driverEarningPerDelivery') return `₹${rupees(Number(v))}`;
+    if (k === 'deliveryChargeFlat' || k === 'freeDeliveryThreshold' || k === 'driverEarningPerDelivery' || k === 'minPayoutAmount') return `₹${rupees(Number(v))}`;
     if (k === 'defaultCommissionRate' || k === 'gstOnCommission' || k === 'defaultGstRate') return `${pct(Number(v))}%`;
     if (k === 'maxDeliveryRadiusKm') return `${v} km`;
     const text = String(v ?? '');
@@ -360,7 +366,7 @@ export const PlatformSettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 sm:p-8 pb-28 bg-gray-50 min-h-[calc(100vh-4rem)]">
+    <div className="p-4 sm:p-6 lg:p-8 pb-28 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
@@ -389,7 +395,7 @@ export const PlatformSettingsPage: React.FC = () => {
           </div>
         )}
         {!docExists && !loadError && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+          <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg text-xs text-primary-800">
             No settings have been saved yet — the defaults below are in use. Review them and press <b>Save changes</b> to publish.
           </div>
         )}
@@ -497,6 +503,13 @@ export const PlatformSettingsPage: React.FC = () => {
                   input={{ inputMode: 'decimal', value: form.driverEarning, placeholder: '0', onChange: (e) => set('driverEarning', decimal(e.target.value)) }}
                 />
                 <Field
+                  label="Minimum payout request"
+                  prefix="₹"
+                  hint="Vendors and drivers cannot withdraw less than this at a time."
+                  error={errors.minPayout}
+                  input={{ inputMode: 'decimal', value: form.minPayout, placeholder: '100', onChange: (e) => set('minPayout', decimal(e.target.value)) }}
+                />
+                <Field
                   label="Default product GST"
                   suffix="%"
                   hint="Used when a product has no GST rate of its own."
@@ -521,26 +534,21 @@ export const PlatformSettingsPage: React.FC = () => {
             </SectionCard>
 
             <SectionCard id="operations" icon={<Power className="w-5 h-5" />} title="Operations" desc="Take the storefront offline for maintenance.">
-              <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-gray-50">
+              <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200/80 bg-slate-50/80 transition-all duration-200">
                 <div>
-                  <p className="text-sm font-bold text-gray-900">Maintenance mode</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    When on, customers see the message below instead of the shop. Vendor, driver and admin apps keep working.
+                  <p className="text-sm font-bold text-slate-900">Maintenance mode</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    When active, customers see the maintenance notice instead of the store. Vendor, driver, and admin consoles remain operational.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.maintenanceMode}
-                  onClick={() => set('maintenanceMode', !form.maintenanceMode)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors ${form.maintenanceMode ? 'bg-red-500' : 'bg-gray-300'}`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform mt-0.5 ${
-                      form.maintenanceMode ? 'translate-x-[22px]' : 'translate-x-0.5'
-                    }`}
+                <div className="shrink-0 pt-0.5">
+                  <Switch
+                    checked={form.maintenanceMode}
+                    onChange={(checked) => set('maintenanceMode', checked)}
+                    tone="danger"
+                    size="md"
                   />
-                </button>
+                </div>
               </div>
               <Field label="Message shown to customers" error={errors.maintenanceMessage}>
                 <textarea
@@ -609,20 +617,23 @@ export const PlatformSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Sticky save bar */}
+      {/* Modern floating save dock */}
       {dirty && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-          <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4 lg:pl-[calc(16rem+1.5rem)]">
-            <p className="text-xs text-gray-600">
-              <b className="text-gray-900">{changedKeys.length}</b> unsaved change{changedKeys.length > 1 ? 's' : ''}
-              {hasErrors && <span className="text-red-600 ml-2">· fix the highlighted fields to save</span>}
-            </p>
-            <div className="flex gap-2">
+        <div className="fixed bottom-4 sm:bottom-6 inset-x-0 lg:left-64 z-50 flex justify-center pointer-events-none px-4 pb-safe animate-page-enter">
+          <div className="pointer-events-auto w-full max-w-xl rounded-2xl bg-white/95 text-slate-900 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.18),0_4px_12px_-2px_rgba(15,23,42,0.08)] border border-slate-200/90 backdrop-blur-xl p-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse-live shrink-0" />
+              <p className="text-xs sm:text-sm font-semibold text-slate-700 truncate">
+                <b className="text-slate-950 font-bold">{changedKeys.length}</b> unsaved change{changedKeys.length > 1 ? 's' : ''}
+                {hasErrors && <span className="text-rose-600 font-semibold ml-2">· Fix errors to save</span>}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleDiscard}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:scale-95 transition-all duration-200 disabled:opacity-50"
               >
                 Discard
               </button>
@@ -630,7 +641,7 @@ export const PlatformSettingsPage: React.FC = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={saving || hasErrors}
-                className="px-5 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                className="px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/20 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
               >
                 {saving && <Spinner size="sm" />}
                 Save changes

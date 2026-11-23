@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useDriverAuth } from '../../context/AuthContext';
 import { updateDocument, friendlyError } from '@poeage/firebase-client';
 import { COLLECTION } from '@poeage/config';
 import { formatMoney } from '@poeage/utils';
-import { Button, Card, Spinner } from '@poeage/ui';
+import { Spinner } from '@poeage/ui';
+import { ActionButton, Notice } from '../../components/ui';
 import {
   User as UserIcon,
   Phone,
@@ -23,9 +23,8 @@ import {
   Lock,
 } from 'lucide-react';
 
-const inputCls =
-  'w-full px-3.5 py-2 text-sm rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent disabled:opacity-60';
-const labelCls = 'block text-xs font-semibold text-slate-400 mb-1';
+const inputCls = 'd-input';
+const labelCls = 'block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5';
 
 const digits = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
 const maskTail = (v: string) => (v.length > 4 ? `•••• ${v.slice(-4)}` : v);
@@ -42,7 +41,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   approved: { label: 'Verified', cls: 'bg-green-500/15 text-green-300 border-green-500/30' },
   active: { label: 'Verified · Online', cls: 'bg-green-500/15 text-green-300 border-green-500/30' },
   offline: { label: 'Verified', cls: 'bg-green-500/15 text-green-300 border-green-500/30' },
-  pending_review: { label: 'Under review', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  pending_review: { label: 'Under review', cls: 'bg-accent-500/15 text-accent-300 border-accent-500/30' },
   suspended: { label: 'Suspended', cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
   rejected: { label: 'Rejected', cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
 };
@@ -88,7 +87,7 @@ export const DriverProfilePage: React.FC = () => {
   if (!driver || !user) {
     return (
       <div className="py-24 flex justify-center">
-        <Spinner size="lg" className="text-amber-500" />
+        <Spinner size="lg" className="text-accent-400" />
       </div>
     );
   }
@@ -163,29 +162,18 @@ export const DriverProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-xl mx-auto pb-28 space-y-5 text-white">
+    <div className="px-3 min-[380px]:px-4 sm:px-6 lg:px-10 pt-4 lg:pt-10 max-w-[1100px] mx-auto space-y-4 lg:space-y-5 text-white">
       {notice && (
-        <div
-          className={`p-3 rounded-lg flex items-start gap-2.5 text-xs border ${
-            notice.type === 'ok'
-              ? 'bg-green-500/10 border-green-500/30 text-green-300'
-              : 'bg-red-500/10 border-red-500/30 text-red-300'
-          }`}
-        >
-          {notice.type === 'ok' ? (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          )}
-          <span>{notice.text}</span>
-        </div>
+        <Notice tone={notice.type === 'ok' ? 'success' : 'error'}>{notice.text}</Notice>
       )}
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 items-start">
+        <div className="space-y-5 min-w-0">
       {/* Identity */}
-      <Card className="text-white border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 p-5 relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+      <section className="d-card p-5 sm:p-6 text-white relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-accent-500/10 blur-2xl pointer-events-none" />
         <div className="flex items-center gap-4 relative">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg ring-4 ring-amber-500/20">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-accent-500/25">
             {(driver.displayName || user.email || 'D')[0]?.toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -199,36 +187,36 @@ export const DriverProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mt-5 text-center">
-          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
-            <Package className="w-4 h-4 text-amber-400 mx-auto" />
+        <div className="grid grid-cols-3 gap-2 min-[380px]:gap-3 mt-5 text-center">
+          <div className="bg-black/25 border border-white/10 rounded-2xl p-3">
+            <Package className="w-4 h-4 text-accent-400 mx-auto" />
             <p className="text-base font-black mt-1">{m?.totalDeliveries ?? 0}</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Deliveries</p>
           </div>
-          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
-            <Star className="w-4 h-4 text-amber-400 mx-auto" />
+          <div className="bg-black/25 border border-white/10 rounded-2xl p-3">
+            <Star className="w-4 h-4 text-accent-400 mx-auto" />
             <p className="text-base font-black mt-1">
               {(m?.totalRatings ?? 0) > 0 ? m?.averageRating?.toFixed(1) : '–'}
             </p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Rating</p>
           </div>
-          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
-            <Wallet className="w-4 h-4 text-amber-400 mx-auto" />
-            <p className="text-base font-black mt-1">{formatMoney(m?.totalEarnings ?? 0)}</p>
+          <div className="bg-black/25 border border-white/10 rounded-2xl p-3">
+            <Wallet className="w-4 h-4 text-accent-400 mx-auto" />
+            <p className="text-sm min-[380px]:text-base font-black mt-1 truncate">{formatMoney(m?.totalEarnings ?? 0)}</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Earned</p>
           </div>
         </div>
-      </Card>
+      </section>
 
       {/* Profile completeness */}
-      <Card className="text-white border-slate-800 bg-slate-900 p-5">
+      <section className="d-card p-5 sm:p-6 text-white">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Profile completeness</h2>
-          <span className="text-sm font-black text-amber-400">{completeness.percent}%</span>
+          <h2 className="text-sm font-extrabold text-white">Profile completeness</h2>
+          <span className="text-sm font-black text-accent-400">{completeness.percent}%</span>
         </div>
-        <div className="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-accent-400 to-accent-200 transition-all duration-500"
             style={{ width: `${completeness.percent}%` }}
           />
         </div>
@@ -237,7 +225,7 @@ export const DriverProfilePage: React.FC = () => {
             <li
               key={it.label}
               className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
-                it.done ? 'border-green-500/20 bg-green-500/5 text-green-300' : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                it.done ? 'border-green-500/20 bg-green-500/5 text-green-300' : 'border-white/10 bg-white/[0.03] text-slate-400'
               }`}
             >
               {it.done ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />}
@@ -245,12 +233,40 @@ export const DriverProfilePage: React.FC = () => {
             </li>
           ))}
         </ul>
-      </Card>
+      </section>
 
+      {/* Vehicle & documents (read only) */}
+      <section className="d-card p-5 sm:p-6 text-white">
+        <h2 className="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+          <Truck className="w-4 h-4 text-accent-400" /> Vehicle & documents
+        </h2>
+        <dl className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <dt className="text-slate-400 flex items-center gap-2"><Truck className="w-4 h-4" /> Vehicle</dt>
+            <dd className="font-semibold">{VEHICLE_LABEL[driver.vehicleType] ?? driver.vehicleType}</dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-slate-400">Registration no.</dt>
+            <dd className="font-mono font-semibold">{driver.vehicleNumber || 'Not provided'}</dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-slate-400 flex items-center gap-2"><IdCard className="w-4 h-4" /> Licence no.</dt>
+            <dd className="font-mono font-semibold">{driver.licenseNumber ? maskTail(driver.licenseNumber) : 'Not provided'}</dd>
+          </div>
+        </dl>
+        <p className="mt-4 text-[11px] text-slate-500 flex items-start gap-1.5">
+          <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          Vehicle and licence details were verified by our operations team. To change them, contact support so your
+          profile can be re-verified.
+        </p>
+      </section>
+
+        </div>
+        <div className="space-y-5 min-w-0">
       {/* Personal details */}
-      <Card className="text-white border-slate-800 bg-slate-900 p-5">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-4">
-          <UserIcon className="w-4 h-4 text-amber-400" /> Personal details
+      <section className="d-card p-5 sm:p-6 text-white">
+        <h2 className="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+          <UserIcon className="w-4 h-4 text-accent-400" /> Personal details
         </h2>
         <form onSubmit={savePersonal} className="space-y-3">
           <div>
@@ -279,42 +295,16 @@ export const DriverProfilePage: React.FC = () => {
               onChange={(e) => setServiceArea(e.target.value)}
             />
           </div>
-          <Button type="submit" isLoading={saving === 'personal'} className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+          <ActionButton type="submit" loading={saving === 'personal'} className="w-full">
             Save details
-          </Button>
+          </ActionButton>
         </form>
-      </Card>
-
-      {/* Vehicle & documents (read only) */}
-      <Card className="text-white border-slate-800 bg-slate-900 p-5">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-4">
-          <Truck className="w-4 h-4 text-amber-400" /> Vehicle & documents
-        </h2>
-        <dl className="space-y-3 text-sm">
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400 flex items-center gap-2"><Truck className="w-4 h-4" /> Vehicle</dt>
-            <dd className="font-semibold">{VEHICLE_LABEL[driver.vehicleType] ?? driver.vehicleType}</dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400">Registration no.</dt>
-            <dd className="font-mono font-semibold">{driver.vehicleNumber || 'Not provided'}</dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400 flex items-center gap-2"><IdCard className="w-4 h-4" /> Licence no.</dt>
-            <dd className="font-mono font-semibold">{driver.licenseNumber ? maskTail(driver.licenseNumber) : 'Not provided'}</dd>
-          </div>
-        </dl>
-        <p className="mt-4 text-[11px] text-slate-500 flex items-start gap-1.5">
-          <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          Vehicle and licence details were verified by our operations team. To change them, contact support so your
-          profile can be re-verified.
-        </p>
-      </Card>
+      </section>
 
       {/* Emergency contact */}
-      <Card className="text-white border-slate-800 bg-slate-900 p-5">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-4">
-          <HeartPulse className="w-4 h-4 text-amber-400" /> Emergency contact
+      <section className="d-card p-5 sm:p-6 text-white">
+        <h2 className="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+          <HeartPulse className="w-4 h-4 text-accent-400" /> Emergency contact
         </h2>
         <form onSubmit={saveEmergency} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -342,21 +332,21 @@ export const DriverProfilePage: React.FC = () => {
               onChange={(e) => setEcPhone(digits(e.target.value, 10))}
             />
           </div>
-          <Button type="submit" isLoading={saving === 'emergency'} className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+          <ActionButton type="submit" loading={saving === 'emergency'} className="w-full">
             Save emergency contact
-          </Button>
+          </ActionButton>
         </form>
-      </Card>
+      </section>
 
       {/* Payout account */}
-      <Card className="text-white border-slate-800 bg-slate-900 p-5">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 mb-4">
-          <Landmark className="w-4 h-4 text-amber-400" /> Payout bank account
+      <section className="d-card p-5 sm:p-6 text-white">
+        <h2 className="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+          <Landmark className="w-4 h-4 text-accent-400" /> Payout bank account
         </h2>
 
         {hasBank && !editingBank ? (
           <div className="space-y-3">
-            <div className="p-3 bg-slate-800/80 rounded-xl text-xs space-y-1">
+            <div className="p-4 bg-white/[0.04] border border-white/10 rounded-2xl text-xs space-y-1">
               <p className="font-bold text-white">{driver.bankDetails?.bankName}</p>
               <p className="text-slate-300">{driver.bankDetails?.accountHolder}</p>
               <p className="text-slate-400 font-mono">
@@ -364,9 +354,9 @@ export const DriverProfilePage: React.FC = () => {
               </p>
               {driver.bankDetails?.upiId && <p className="text-slate-400">UPI: {driver.bankDetails.upiId}</p>}
             </div>
-            <Button type="button" variant="outline" className="w-full border-slate-700 text-slate-200" onClick={() => setEditingBank(true)}>
+            <ActionButton type="button" tone="outline" className="w-full" onClick={() => setEditingBank(true)}>
               Change bank account
-            </Button>
+            </ActionButton>
           </div>
         ) : (
           <form onSubmit={saveBank} className="space-y-3">
@@ -406,29 +396,24 @@ export const DriverProfilePage: React.FC = () => {
             </div>
             <div className="flex gap-2">
               {hasBank && (
-                <Button type="button" variant="outline" className="flex-1 border-slate-700 text-slate-200" onClick={() => setEditingBank(false)}>
+                <ActionButton type="button" tone="outline" className="flex-1" onClick={() => setEditingBank(false)}>
                   Cancel
-                </Button>
+                </ActionButton>
               )}
-              <Button type="submit" isLoading={saving === 'bank'} className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+              <ActionButton type="submit" loading={saving === 'bank'} className="flex-1">
                 Save bank account
-              </Button>
+              </ActionButton>
             </div>
           </form>
         )}
-      </Card>
+      </section>
 
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={signOutDriver}
-        className="w-full text-slate-400 hover:text-red-400 flex items-center justify-center gap-2"
-      >
+        </div>
+      </div>
+
+      <ActionButton type="button" tone="danger" onClick={signOutDriver} className="w-full lg:hidden">
         <LogOut className="w-4 h-4" /> Sign out
-      </Button>
-      <p className="text-center text-[11px] text-slate-600">
-        Need help? <Link to="/" className="underline">Back to deliveries</Link>
-      </p>
+      </ActionButton>
     </div>
   );
 };

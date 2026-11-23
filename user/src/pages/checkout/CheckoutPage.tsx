@@ -324,6 +324,19 @@ export const CheckoutPage: React.FC = () => {
 
       // Master order doc. Product prices are GST-inclusive, so GST is the tax portion already inside the subtotal.
       const includedGst = Math.round(subtotal - subtotal / (1 + liveSettings.defaultGstRate));
+      if (couponCode && couponDiscount > 0) {
+        // One use per customer: the document id is "<uid>_<code>", so the database refuses a second order with this code.
+        batch.set(doc(db, 'couponRedemptions', `${user.uid}_${couponCode}`), {
+          couponId: couponCode,
+          couponCode,
+          userId: user.uid,
+          orderId,
+          discountAmount: couponDiscount,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
       batch.set(masterOrderRef, {
         id: orderId,
         customerId: user.uid,
@@ -385,7 +398,7 @@ export const CheckoutPage: React.FC = () => {
       {/* Breadcrumb / Title */}
       <div className="mb-4 sm:mb-6">
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
-          <Link to="/cart" className="hover:text-blue-600">Cart</Link>
+          <Link to="/cart" className="hover:text-primary-600">Cart</Link>
           <span>/</span>
           <span className="text-gray-900 font-semibold">Secure Checkout</span>
         </div>
@@ -406,7 +419,7 @@ export const CheckoutPage: React.FC = () => {
           <Card className="p-4 sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
+                <div className="w-7 h-7 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center text-xs">
                   1
                 </div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-900">Delivery Address</h2>
@@ -415,7 +428,7 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddressForm(true)}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add New
@@ -508,7 +521,7 @@ export const CheckoutPage: React.FC = () => {
                         onClick={() => setNewLabel(t)}
                         className={`px-3 py-1.5 rounded-lg border text-xs font-semibold capitalize flex items-center gap-1.5 ${
                           newLabel === t
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            ? 'border-primary-600 bg-primary-50 text-primary-700'
                             : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
                       >
@@ -525,7 +538,7 @@ export const CheckoutPage: React.FC = () => {
                   <Button
                     type="submit"
                     disabled={savingAddress}
-                    className="bg-blue-600 text-white font-semibold"
+                    className="bg-primary-600 text-white font-semibold"
                   >
                     {savingAddress ? 'Saving Address...' : 'Save and Use This Address'}
                   </Button>
@@ -551,7 +564,7 @@ export const CheckoutPage: React.FC = () => {
                       onClick={() => setSelectedAddressId(addr.id)}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50/50 shadow-sm'
+                          ? 'border-primary-600 bg-primary-50/50 shadow-sm'
                           : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                     >
@@ -581,7 +594,7 @@ export const CheckoutPage: React.FC = () => {
           {/* STEP 2: Payment Method */}
           <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-2.5 pb-4 border-b border-gray-100 mb-4">
-              <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
+              <div className="w-7 h-7 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center text-xs">
                 2
               </div>
               <h2 className="text-lg font-bold text-gray-900">Payment Option</h2>
@@ -593,7 +606,7 @@ export const CheckoutPage: React.FC = () => {
                 onClick={() => setPaymentMethod('cod')}
                 className={`p-4 rounded-xl border-2 flex items-start gap-4 cursor-pointer transition-all ${
                   paymentMethod === 'cod'
-                    ? 'border-blue-600 bg-blue-50/50'
+                    ? 'border-primary-600 bg-primary-50/50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -602,7 +615,7 @@ export const CheckoutPage: React.FC = () => {
                   name="paymentMethod"
                   checked={paymentMethod === 'cod'}
                   onChange={() => setPaymentMethod('cod')}
-                  className="mt-1 text-blue-600 focus:ring-blue-500"
+                  className="mt-1 text-primary-600 focus:ring-primary-500"
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -624,7 +637,7 @@ export const CheckoutPage: React.FC = () => {
                 <input type="radio" name="paymentMethod" disabled className="mt-1" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-blue-600" />
+                    <CreditCard className="w-5 h-5 text-primary-600" />
                     <span className="font-bold text-gray-900 text-sm">
                       Online Payment (UPI, Credit/Debit Card, NetBanking)
                     </span>
@@ -647,7 +660,7 @@ export const CheckoutPage: React.FC = () => {
                 placeholder="e.g. Leave with security guard, call before arriving..."
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm bg-white text-gray-900 placeholder-gray-400 border border-gray-300 hover:border-gray-400 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm bg-white text-gray-900 placeholder-gray-400 border border-gray-300 hover:border-gray-400 rounded-xl resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:outline-none transition-colors"
               />
               <p className="mt-1 text-[11px] text-gray-400">Shared with the delivery partner. Do not include payment or personal ID details.</p>
             </div>
@@ -710,7 +723,7 @@ export const CheckoutPage: React.FC = () => {
               </div>
               <div className="pt-3 border-t border-gray-200 flex justify-between items-baseline">
                 <span className="text-sm font-bold text-gray-900">Total Payable</span>
-                <span className="text-xl font-black text-blue-600">{formatMoney(grandTotal)}</span>
+                <span className="text-xl font-black text-primary-600">{formatMoney(grandTotal)}</span>
               </div>
             </div>
 
@@ -720,7 +733,7 @@ export const CheckoutPage: React.FC = () => {
                 onClick={handlePlaceOrder}
                 disabled={placingOrder || (!selectedAddressId && !showAddressForm)}
                 size="lg"
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 py-3.5"
+                className="w-full bg-primary-600 hover:bg-primary-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 py-3.5"
               >
                 {placingOrder ? (
                   <>
@@ -748,12 +761,12 @@ export const CheckoutPage: React.FC = () => {
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,.08)] px-3 pt-2.5 pb-3 pb-safe flex items-center gap-3">
         <div className="min-w-0">
           <p className="text-[10px] text-gray-500 leading-none">Total payable</p>
-          <p className="text-lg font-black text-blue-600 leading-tight">{formatMoney(grandTotal)}</p>
+          <p className="text-lg font-black text-primary-600 leading-tight">{formatMoney(grandTotal)}</p>
         </div>
         <button
           onClick={handlePlaceOrder}
           disabled={placingOrder || (!selectedAddressId && !showAddressForm)}
-          className="flex-1 h-12 rounded-xl bg-blue-600 active:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
+          className="flex-1 h-12 rounded-xl bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
         >
           {placingOrder ? (
             <>

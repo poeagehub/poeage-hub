@@ -66,7 +66,7 @@ export const CartPage: React.FC = () => {
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+        <div className="w-20 h-20 bg-primary-50 text-primary-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
           <ShoppingBag className="w-10 h-10" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Your Shopping Cart is Empty</h1>
@@ -74,7 +74,7 @@ export const CartPage: React.FC = () => {
           Looks like you haven't added anything to your cart yet. Explore our top curated deals and trending collections.
         </p>
         <Link to="/products">
-          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 shadow-md">
+          <Button size="lg" className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-8 shadow-md">
             Start Shopping Now
           </Button>
         </Link>
@@ -103,19 +103,19 @@ export const CartPage: React.FC = () => {
 
       {/* Free Shipping Progress */}
       {hasFreeShipping && (
-      <div className="mb-4 sm:mb-6 bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-blue-900 mb-2">
+      <div className="mb-4 sm:mb-6 bg-primary-50 border border-primary-200 rounded-xl p-3 sm:p-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-primary-900 mb-2">
           <span className="flex items-center gap-1.5">
-            <Truck className="w-4 h-4 text-blue-600" />
+            <Truck className="w-4 h-4 text-primary-600" />
             {amountNeededForFreeShipping === 0
               ? '🎉 Congratulations! You have unlocked FREE Express Delivery.'
               : `Add ${formatMoney(amountNeededForFreeShipping)} more to get FREE Express Delivery.`}
           </span>
           <span>{freeShippingPercent}%</span>
         </div>
-        <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-primary-200 rounded-full h-2 overflow-hidden">
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+            className="bg-primary-600 h-2 rounded-full transition-all duration-500"
             style={{ width: `${freeShippingPercent}%` }}
           />
         </div>
@@ -143,7 +143,7 @@ export const CartPage: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                       <Link
                         to={`/product/${item.productId}`}
-                        className="font-bold text-gray-900 text-sm sm:text-base hover:text-blue-600 line-clamp-2 leading-snug"
+                        className="font-bold text-gray-900 text-sm sm:text-base hover:text-primary-600 line-clamp-2 leading-snug"
                       >
                         {item.name}
                       </Link>
@@ -201,7 +201,7 @@ export const CartPage: React.FC = () => {
           {/* Trust Guarantees */}
           <div className="hidden sm:grid grid-cols-3 gap-3 pt-2">
             <div className="p-3 bg-white rounded-xl border border-gray-200 flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <ShieldCheck className="w-5 h-5 text-primary-600 flex-shrink-0" />
               <div className="text-xs">
                 <p className="font-bold text-gray-900">100% Secure Checkout</p>
                 <p className="text-gray-500">256-bit SSL encrypted</p>
@@ -267,7 +267,7 @@ export const CartPage: React.FC = () => {
                   <span className="text-base font-bold text-gray-900">Total Amount</span>
                   <p className="text-[10px] text-gray-400">All prices in Indian Rupees (INR)</p>
                 </div>
-                <span className="text-2xl font-black text-blue-600">{formatMoney(grandTotal)}</span>
+                <span className="text-2xl font-black text-primary-600">{formatMoney(grandTotal)}</span>
               </div>
             </div>
 
@@ -291,7 +291,7 @@ export const CartPage: React.FC = () => {
               ) : (
                 <form onSubmit={handleApplyCoupon} className="space-y-2">
                   <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-blue-600" />
+                    <Tag className="w-3.5 h-3.5 text-primary-600" />
                     Have a promo coupon?
                   </label>
                   <div className="flex gap-2">
@@ -300,7 +300,7 @@ export const CartPage: React.FC = () => {
                       placeholder="Enter coupon code"
                       value={inputCoupon}
                       onChange={(e) => setInputCoupon(e.target.value)}
-                      className="flex-1 min-w-0 px-3 py-2.5 text-sm border border-gray-300 rounded-lg uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="flex-1 min-w-0 px-3 py-2.5 text-sm border border-gray-300 rounded-lg uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:ring-2 focus:ring-primary-500 focus:outline-none"
                     />
                     <Button
                       type="submit"
@@ -333,7 +333,7 @@ export const CartPage: React.FC = () => {
               <Button
                 onClick={() => navigate('/checkout')}
                 size="lg"
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 py-3.5"
+                className="w-full bg-primary-600 hover:bg-primary-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 py-3.5"
               >
                 Proceed to Checkout
                 <ArrowRight className="w-4 h-4" />
@@ -351,7 +351,7 @@ export const CartPage: React.FC = () => {
         </div>
         <button
           onClick={() => navigate('/checkout')}
-          className="flex-1 h-12 rounded-xl bg-blue-600 active:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
+          className="flex-1 h-12 rounded-xl bg-primary-600 active:bg-primary-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md"
         >
           Checkout
           <ArrowRight className="w-4 h-4" />

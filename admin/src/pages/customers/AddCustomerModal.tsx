@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { AccountStatus } from '@poeage/types';
 import { INDIAN_STATES } from '@poeage/config';
 import { Button } from '@poeage/ui';
@@ -29,7 +30,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -94,13 +95,24 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-5 flex items-center justify-between border-b border-gray-100 bg-slate-50">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-100 overflow-hidden text-left my-auto animate-in fade-in zoom-in-95 duration-150"
+        >
+          {/* Header */}
+          <div className="p-5 flex items-center justify-between border-b border-gray-100 bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-primary-600 text-white flex items-center justify-center shadow-sm">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
@@ -139,7 +151,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="e.g. Priya Sharma"
-                  className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                 />
               </div>
             </div>
@@ -156,7 +168,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. priya.sharma@example.com"
-                  className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                 />
               </div>
             </div>
@@ -171,7 +183,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+91 98765 43210"
-                    className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                   />
                 </div>
               </div>
@@ -181,7 +193,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as AccountStatus)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                 >
                   <option value="active">Active (Full Access)</option>
                   <option value="pending_verification">Pending Verification</option>
@@ -198,7 +210,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 type="checkbox"
                 checked={includeAddress}
                 onChange={(e) => setIncludeAddress(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
               />
               <span>Attach Initial Delivery Address</span>
             </label>
@@ -207,7 +219,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           {includeAddress && (
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <MapPin className="w-4 h-4 text-blue-600" />
+                <MapPin className="w-4 h-4 text-primary-600" />
                 <span>Primary Delivery Address</span>
               </div>
 
@@ -221,7 +233,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       onClick={() => setAddressLabel(lbl)}
                       className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize border transition-colors ${
                         addressLabel === lbl
-                          ? 'bg-blue-600 text-white border-blue-600'
+                          ? 'bg-primary-600 text-white border-primary-600'
                           : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -238,7 +250,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   value={addressLine1}
                   onChange={(e) => setAddressLine1(e.target.value)}
                   placeholder="e.g. 104, Green Heights, 5th Main Road"
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                 />
               </div>
 
@@ -250,7 +262,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Bengaluru"
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                   />
                 </div>
 
@@ -262,7 +274,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     onChange={(e) => setPincode(e.target.value)}
                     placeholder="e.g. 560001"
                     maxLength={6}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                   />
                 </div>
               </div>
@@ -272,7 +284,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 <select
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white"
                 >
                   {INDIAN_STATES.map((st) => (
                     <option key={st} value={st}>
@@ -296,5 +308,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         </form>
       </div>
     </div>
-  );
+  </div>,
+  document.body,
+);
 };

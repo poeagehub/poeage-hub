@@ -15,10 +15,15 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
     "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.6.3"
   },
   "peerDependencies": {
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "*",
+    "react-router-dom": "*"
   }
 }

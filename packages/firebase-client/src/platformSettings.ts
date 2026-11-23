@@ -16,6 +16,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettingsData = {
   defaultCommissionRate: 0.12,
   gstOnCommission: 0.18,
   driverEarningPerDelivery: 5000, // ₹50
+  minPayoutAmount: 10000, // ₹100
   defaultGstRate: 0.18,
   razorpayKeyId: '',
   maintenanceMode: false,

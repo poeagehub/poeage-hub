@@ -614,6 +614,7 @@ export interface PlatformSettings extends BaseDocument {
   defaultCommissionRate: number; // e.g. 0.12
   gstOnCommission: number; // 0.18
   driverEarningPerDelivery: number; // paise
+  minPayoutAmount: number; // paise — smallest withdrawal a vendor or driver may request
   defaultGstRate: number; // default product GST, e.g. 0.18
   // Payments
   razorpayKeyId: string; // public key id only — the secret lives in Cloud Functions config
@@ -654,4 +655,37 @@ export interface AuditLog extends BaseDocument {
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   ipAddress?: string;
+}
+
+
+// ===== PAYOUT REQUESTS =====
+
+export type PayoutRequesterType = 'vendor' | 'driver';
+export type PayoutStatus = 'pending' | 'paid' | 'rejected' | 'cancelled';
+
+export interface PayoutBankSnapshot {
+  accountHolder: string;
+  accountNumber: string;
+  ifscCode: string;
+  bankName: string;
+  upiId?: string;
+}
+
+/** A vendor's or driver's request to withdraw earned money. Processed by an admin. */
+export interface PayoutRequest extends BaseDocument {
+  requesterType: PayoutRequesterType;
+  requesterId: string; // vendor id or driver id
+  requesterName: string;
+  userId: string; // auth uid of whoever made the request
+  amount: number; // paise
+  status: PayoutStatus;
+  bank: PayoutBankSnapshot; // the account the money is sent to, frozen at request time
+  note?: string;
+  // Set by the admin who processes it
+  referenceNumber?: string; // bank transfer / UTR reference when paid
+  adminNote?: string; // reason when rejected
+  processedBy?: string;
+  processedByEmail?: string;
+  processedAt?: Timestamp;
+  cancelledAt?: Timestamp;
 }

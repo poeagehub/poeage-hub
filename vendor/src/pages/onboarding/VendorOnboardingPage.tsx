@@ -57,7 +57,7 @@ export const VendorOnboardingPage: React.FC = () => {
         <CardHeader className="space-y-2 border-b border-slate-800 pb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold">
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
@@ -165,7 +165,7 @@ export const VendorOnboardingPage: React.FC = () => {
 
             <Button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 shadow-lg"
+              className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold py-3 shadow-lg"
               isLoading={loading}
             >
               Submit Application for Administrator Review

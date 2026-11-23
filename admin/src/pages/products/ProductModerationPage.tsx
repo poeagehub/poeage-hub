@@ -89,17 +89,17 @@ export const ProductModerationPage: React.FC = () => {
       )}
 
       {/* Filter Tabs & Search */}
-      <Card>
+      <Card className="border-slate-200/80 shadow-xs">
         <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg text-xs font-semibold">
+          <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
             {(['all', 'pending', 'published', 'rejected'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
+                className={`px-3 py-1.5 rounded-lg capitalize transition-all duration-200 active:scale-95 ${
                   activeTab === tab
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
+                    ? 'bg-primary-600 text-white shadow-xs shadow-primary-500/30'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 {tab === 'pending' ? 'Pending Review' : tab}
@@ -113,9 +113,9 @@ export const ProductModerationPage: React.FC = () => {
               placeholder="Search product or vendor ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/25 focus:border-primary-500 transition-all"
             />
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
           </div>
         </CardContent>
       </Card>
@@ -181,7 +181,7 @@ export const ProductModerationPage: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="py-3.5 px-4 text-xs font-semibold text-blue-600">
+                    <td className="py-3.5 px-4 text-xs font-semibold text-primary-600">
                       {Math.round((p.commissionRate ?? 0.1) * 100)}%
                     </td>
 

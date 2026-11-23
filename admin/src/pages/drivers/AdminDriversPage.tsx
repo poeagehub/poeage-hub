@@ -109,7 +109,7 @@ export const AdminDriversPage: React.FC = () => {
   const approvedDrivers = drivers.filter((d) => d.status === 'approved' || d.status === 'active');
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Logistics & Delivery Fleet</h1>
@@ -129,19 +129,19 @@ export const AdminDriversPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-3 text-xs">
+      <div className="flex gap-2 border-b border-slate-200 pb-3 text-xs">
         <button
           onClick={() => setActiveTab('fleet')}
-          className={`px-4 py-2 rounded-lg font-bold transition-colors ${
-            activeTab === 'fleet' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 active:scale-95 ${
+            activeTab === 'fleet' ? 'bg-primary-600 text-white shadow-xs shadow-primary-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           Fleet Directory ({drivers.length})
         </button>
         <button
           onClick={() => setActiveTab('dispatch')}
-          className={`px-4 py-2 rounded-lg font-bold transition-colors ${
-            activeTab === 'dispatch' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+          className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 active:scale-95 ${
+            activeTab === 'dispatch' ? 'bg-primary-600 text-white shadow-xs shadow-primary-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           Dispatch Console ({deliveries.filter((d) => d.status !== 'delivered').length} Active)
@@ -320,7 +320,7 @@ export const AdminDriversPage: React.FC = () => {
                           onChange={(e) =>
                             setSelectedDriverMap((prev) => ({ ...prev, [del.id]: e.target.value }))
                           }
-                          className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
                         >
                           <option value="">Choose Driver...</option>
                           {approvedDrivers.map((d) => (
@@ -333,7 +333,7 @@ export const AdminDriversPage: React.FC = () => {
                           size="sm"
                           disabled={isActing || !selectedDriverMap[del.id]}
                           onClick={() => handleAssignDriver(del.id)}
-                          className="bg-blue-600 text-white font-bold text-xs flex items-center gap-1"
+                          className="bg-primary-600 text-white font-bold text-xs flex items-center gap-1"
                         >
                           {isActing ? <Spinner size="sm" /> : <Send className="w-3.5 h-3.5" />}
                           Assign Partner
