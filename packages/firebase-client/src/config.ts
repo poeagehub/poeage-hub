@@ -1,6 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
 
@@ -44,7 +44,13 @@ function initFirebase() {
   }
 
   auth = getAuth(app);
-  db = getFirestore(app);
+  // Some networks, proxies and VPNs block Firestore's streaming connection, which shows up as
+  // "Could not reach Cloud Firestore backend". Let the SDK fall back to long-polling automatically.
+  try {
+    db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    db = getFirestore(app); // already initialised (e.g. after a hot reload)
+  }
   storage = getStorage(app);
   functions = getFunctions(app, 'asia-south1');
 

@@ -159,7 +159,7 @@ export const AuthShell: React.FC<{ children: React.ReactNode; wide?: boolean }> 
       <p className="relative text-xs text-slate-500">© {new Date().getFullYear()} POEAGE HUB · Delivery partner portal</p>
     </aside>
 
-    <main className="flex items-center justify-center px-4 py-10 sm:px-8">
+    <main className="flex items-center justify-center px-3 min-[380px]:px-4 py-6 min-[380px]:py-10 sm:px-8">
       <div className={cx('w-full', wide ? 'max-w-lg' : 'max-w-md')}>
         <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
           <span className="w-11 h-11 rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 text-white flex items-center justify-center shadow-lg shadow-accent-500/30"><Truck className="w-6 h-6" /></span>

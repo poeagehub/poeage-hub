@@ -13,10 +13,14 @@ Thumbs.db
 *.log
 .vite/
 storybook-static/
-lib/
+# compiled Cloud Functions output only (source folders named "lib" must be committed)
+/functions/lib/
 .turbo/
 *.tsbuildinfo
 
 # Firebase service account keys - never commit
 *serviceAccount*.json
 *-firebase-adminsdk-*.json
+
+# generated Vercel environment file
+deploy/vercel.env

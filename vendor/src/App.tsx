@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { VendorAuthProvider } from './context/AuthContext';
-import { VendorGuard } from './components/VendorGuard';
+import { VendorGuard, RequireSignedIn } from './components/VendorGuard';
 import { VendorLayout } from './components/layout/VendorLayout';
 import { VendorLoginPage } from './pages/auth/VendorLoginPage';
 import { VendorRegisterPage } from './pages/auth/VendorRegisterPage';
@@ -22,8 +22,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<VendorLoginPage />} />
           <Route path="/register" element={<VendorRegisterPage />} />
-          <Route path="/onboarding" element={<VendorOnboardingPage />} />
-          <Route path="/status" element={<VendorStatusPage />} />
+          <Route path="/onboarding" element={<RequireSignedIn><VendorOnboardingPage /></RequireSignedIn>} />
+          <Route path="/status" element={<RequireSignedIn><VendorStatusPage /></RequireSignedIn>} />
           <Route
             path="/*"
             element={

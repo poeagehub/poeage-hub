@@ -34,6 +34,8 @@ interface VendorAuthContextType {
   user: User | null;
   vendor: Vendor | null;
   status: VendorStatus | 'none';
+  /** True when the profile could not be loaded (offline), as opposed to "no profile exists". */
+  profileError: boolean;
   loading: boolean;
   error: string | null;
   loginVendor: (email: string, pass: string) => Promise<void>;
@@ -51,13 +53,16 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState(false);
 
   const fetchVendorData = async (uid: string) => {
     try {
       const v = await getDocument<Vendor>(COLLECTION.VENDORS, uid);
+      setProfileError(false);
       setVendor(v);
     } catch (err) {
       console.error('[VendorAuth] Error fetching vendor doc:', err);
+      setProfileError(true);
     }
   };
 
@@ -81,8 +86,12 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const unsubscribe = subscribeToDocument<Vendor>(
       COLLECTION.VENDORS,
       user.uid,
-      (v) => setVendor(v),
+      (v) => {
+        setProfileError(false);
+        setVendor(v);
+      },
       (err) => console.error('[VendorAuth] Live vendor profile listener failed:', err),
+      { skipEmptyCache: true },
     );
     return () => unsubscribe();
   }, [user?.uid]);
@@ -170,11 +179,11 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setError(null);
     try {
       await logout();
-      setUser(null);
-      setVendor(null);
     } catch (err: unknown) {
       console.error('[VendorAuth] Sign out error:', err);
     }
+    setUser(null);
+    setVendor(null);
   };
 
   const refreshVendorState = async () => {
@@ -188,6 +197,7 @@ export const VendorAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <VendorAuthContext.Provider
       value={{
+        profileError,
         user,
         vendor,
         status,

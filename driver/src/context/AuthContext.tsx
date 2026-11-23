@@ -26,6 +26,8 @@ interface DriverAuthContextType {
   user: User | null;
   driver: Driver | null;
   status: DriverStatus | 'none';
+  /** True when the profile could not be loaded (offline / server unreachable), as opposed to "no profile exists". */
+  profileError: boolean;
   isOnline: boolean;
   loading: boolean;
   error: string | null;
@@ -46,16 +48,20 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isOnline, setIsOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState(false);
 
   const fetchDriverData = async (uid: string) => {
     try {
       const d = await getDocument<Driver>(COLLECTION.DRIVERS, uid);
+      setProfileError(false);
       setDriver(d);
       if (d) {
         setIsOnline(d.isOnline ?? false);
       }
     } catch (err) {
       console.error('[DriverAuth] Error fetching driver profile:', err);
+      // Keep whatever profile we already have; just remember that we could not reach the server.
+      setProfileError(true);
     }
   };
 
@@ -81,10 +87,12 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       COLLECTION.DRIVERS,
       user.uid,
       (d) => {
+        setProfileError(false);
         setDriver(d);
         if (d) setIsOnline(d.isOnline ?? false);
       },
       (err) => console.error('[DriverAuth] Live driver profile listener failed:', err),
+      { skipEmptyCache: true },
     );
     return () => unsubscribe();
   }, [user?.uid]);
@@ -180,13 +188,13 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const signOutDriver = async () => {
     setError(null);
-    // Best-effort: going offline must never block sign-out (e.g. flaky network).
+    // Best-effort: going offline must never block sign-out. When the network is down Firestore queues the
+    // write and never answers, so wait at most a couple of seconds and then sign out anyway.
     if (user && isOnline) {
-      try {
-        await updateDocument(COLLECTION.DRIVERS, user.uid, { isOnline: false, status: 'offline' });
-      } catch (err: unknown) {
-        console.error('[DriverAuth] Could not mark driver offline:', err);
-      }
+      const markOffline = updateDocument(COLLECTION.DRIVERS, user.uid, { isOnline: false, status: 'offline' }).catch((err: unknown) =>
+        console.error('[DriverAuth] Could not mark driver offline:', err),
+      );
+      await Promise.race([markOffline, new Promise<void>((resolve) => setTimeout(resolve, 2500))]);
     }
     try {
       await logout();
@@ -212,6 +220,7 @@ export const DriverAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         user,
         driver,
         status,
+        profileError,
         isOnline,
         loading,
         error,

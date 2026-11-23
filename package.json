@@ -40,5 +40,8 @@
       "esbuild",
       "protobufjs"
     ]
+  },
+  "engines": {
+    "node": "26.x"
   }
 }

@@ -125,10 +125,21 @@ export function subscribeToDocument<T>(
   docId: string,
   callback: (data: T | null) => void,
   onError?: (err: Error) => void,
+  options?: {
+    /**
+     * Ignore an empty snapshot that came from the local cache. While the device is offline Firestore reports
+     * a document it has never downloaded as "missing" — which is not the same as "does not exist".
+     */
+    skipEmptyCache?: boolean;
+  },
 ): Unsubscribe {
   return onSnapshot(
     doc(firebaseDb, collectionPath, docId),
-    (snap) => callback(snap.exists() ? ({ id: snap.id, ...snap.data() } as T) : null),
+    { includeMetadataChanges: !!options?.skipEmptyCache },
+    (snap) => {
+      if (options?.skipEmptyCache && !snap.exists() && snap.metadata.fromCache) return;
+      callback(snap.exists() ? ({ id: snap.id, ...snap.data() } as T) : null);
+    },
     onError,
   );
 }

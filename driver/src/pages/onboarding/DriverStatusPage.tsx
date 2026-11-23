@@ -27,7 +27,7 @@ export const DriverStatusPage: React.FC = () => {
 
   return (
     <AuthShell>
-      <div className="d-card p-8 text-center">
+      <div className="d-card p-5 min-[380px]:p-8 text-center">
         <div className={`w-20 h-20 rounded-3xl border flex items-center justify-center mx-auto ${ring}`}>{info.icon}</div>
         <h1 className="mt-6 text-2xl font-black tracking-tight text-white">{info.title}</h1>
         <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-accent-300">

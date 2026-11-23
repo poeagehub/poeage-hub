@@ -33,11 +33,11 @@ export const DriverLoginPage: React.FC = () => {
 
   return (
     <AuthShell>
-      <div className="d-card p-6 sm:p-8">
+      <div className="d-card p-4 min-[380px]:p-6 sm:p-8">
         <h1 className="text-2xl font-black tracking-tight text-white">Welcome back</h1>
         <p className="text-sm text-slate-400 mt-1.5">Sign in to accept dispatches and track your earnings.</p>
 
-        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4 min-[380px]:space-y-5">
           {errorMsg && <Notice tone="error">{errorMsg}</Notice>}
           <Field label="Email">
             <input className="d-input" type="email" required autoComplete="username" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />

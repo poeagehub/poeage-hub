@@ -33,14 +33,14 @@ export const DriverRegisterPage: React.FC = () => {
 
   return (
     <AuthShell>
-      <div className="d-card p-6 sm:p-8">
+      <div className="d-card p-4 min-[380px]:p-6 sm:p-8">
         <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-accent-300">
           <span className="w-5 h-5 rounded-full bg-accent-500 text-white flex items-center justify-center text-[10px]">1</span> of 2 · Account
         </div>
         <h1 className="mt-3 text-2xl font-black tracking-tight text-white">Become a delivery partner</h1>
         <p className="text-sm text-slate-400 mt-1.5">Create your account first. You'll add your vehicle details next.</p>
 
-        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4 min-[380px]:space-y-5">
           {errorMsg && <Notice tone="error">{errorMsg}</Notice>}
           <Field label="Full name"><input className="d-input" required autoComplete="name" placeholder="Vikram Singh" value={name} onChange={(e) => setName(e.target.value)} /></Field>
           <Field label="Email"><input className="d-input" type="email" required autoComplete="username" placeholder="vikram@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
